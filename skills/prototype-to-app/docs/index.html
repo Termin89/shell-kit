@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>prototype-to-app — конвейер «прототип → приложение»</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #151b23;
+    --panel2: #1a2230;
+    --line: #2a3444;
+    --text: #e6edf3;
+    --muted: #949eae;
+    --blue: #58a6ff;
+    --green: #3fb950;
+    --amber: #d29922;
+    --pink: #f778ba;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.65;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 48px 28px 80px; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: var(--mono); font-size: 0.9em; background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+  pre { font-family: var(--mono); font-size: 13px; line-height: 1.55; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; overflow-x: auto; }
+  pre code { background: none; border: none; padding: 0; }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.02em; }
+  h1 .path { font-family: var(--mono); font-size: 16px; color: var(--muted); font-weight: 400; }
+  h2 { font-size: 20px; margin: 52px 0 14px; letter-spacing: -0.01em; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  h2 .n { color: var(--muted); font-family: var(--mono); font-size: 14px; margin-right: 10px; }
+  h3 { font-size: 15px; margin: 22px 0 8px; color: var(--text); }
+  p.lead { color: var(--muted); font-size: 16px; max-width: 760px; margin: 10px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+  .chip {
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px;
+    background: var(--panel);
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .card h3 { margin-top: 0; font-family: var(--mono); font-size: 14px; }
+  .card p { color: var(--muted); margin: 6px 0 0; font-size: 14px; }
+  .tag { font-family: var(--mono); font-size: 11px; border-radius: 5px; padding: 2px 7px; margin-left: 8px; vertical-align: 2px; }
+  .tag.full { color: var(--green); border: 1px solid rgba(63,185,80,.4); }
+  .tag.frame { color: var(--amber); border: 1px solid rgba(210,153,34,.4); }
+  .tag.reenter { color: var(--blue); border: 1px solid rgba(88,166,255,.4); }
+  table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 14px; }
+  th { text-align: left; font-family: var(--mono); font-size: 12px; color: var(--muted); font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .diagram { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-top: 16px; }
+  .diagram svg { display: block; width: 100%; height: auto; }
+  .tree { font-family: var(--mono); font-size: 13.5px; line-height: 1.9; }
+  .tree .lvl { border-radius: 5px; padding: 1px 8px; font-weight: 700; }
+  .lvl.page    { color: #ff9bce; background: rgba(247,120,186,.12); }
+  .lvl.widget  { color: #d2a8ff; background: rgba(191,127,255,.12); }
+  .lvl.block   { color: #7ee787; background: rgba(63,185,80,.12); }
+  .lvl.primitive { color: #79c0ff; background: rgba(88,166,255,.12); }
+  .tree .q { color: var(--muted); }
+  .tree .arrow { color: var(--line); }
+  .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 16px; }
+  .flowline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--mono); font-size: 13px; margin-top: 14px; }
+  .flowline .step { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 5px 12px; }
+  .flowline .step.hot { border-color: rgba(63,185,80,.5); color: var(--green); }
+  .flowline .op { color: var(--muted); }
+  footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 13px; }
+  footer pre { margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ======================= ШАПКА ======================= -->
+  <h1>prototype-to-app <span class="path">/ skills/prototype-to-app</span></h1>
+  <p class="lead">
+    Скилл-оркестратор shell-core: превращает кликабельный HTML-прототип в целостное
+    модульное приложение поверх платформы (<code>defineModule</code> / <code>defineService</code> / AppState).
+    Ведёт процесс как <b>стейт-машину со сменными фазами-промтами</b>: состояние переживает сессии,
+    договорённости фиксируются журналом, модули собираются параллельно.
+  </p>
+  <div class="chips">
+    <span class="chip"><b>shell-core</b> · конвейер «HTML → проект»</span>
+    <span class="chip">состояние: <b>.app-build/</b> в целевом проекте</span>
+    <span class="chip">делегирует <b>prototype-to-react</b> для токенов/примитивов</span>
+    <span class="chip">запуск: <b>из проекта-потребителя</b>, без регистрации</span>
+  </div>
+
+  <!-- ======================= ГРАФ ======================= -->
+  <h2><span class="n">01</span>Граф машины</h2>
+  <p class="lead">
+    Файлы фаз — сменные промты; машина живёт в целевом проекте. <code>modules</code> — очередь
+    (батчи), а не фаза; <code>design-system</code> и <code>refactor</code> реентерабельны и питают друг друга циклом.
+  </p>
+  <div class="diagram">
+    <svg viewBox="0 0 980 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Граф фаз prototype-to-app">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#949eae"/>
+        </marker>
+      </defs>
+
+      <!-- linear chain arrows -->
+      <line x1="108" y1="70" x2="144" y2="70" stroke="#949eae" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="304" y1="70" x2="332" y2="70" stroke="#949eae" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="448" y1="70" x2="476" y2="70" stroke="#949eae" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="624" y1="70" x2="656" y2="70" stroke="#949eae" stroke-width="1.5" marker-end="url(#ar)"/>
+
+      <!-- modules.map -> refactor (после батча) -->
+      <line x1="726" y1="98" x2="726" y2="164" stroke="#949eae" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="738" y="136" fill="#949eae" font-family="ui-monospace,Menlo,monospace" font-size="11">батч готов</text>
+
+      <!-- refactor -> modules.map (новый батч, loop) -->
+      <path d="M 794 186 C 886 186, 886 70, 800 70" fill="none" stroke="#3fb950" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="874" y="146" fill="#3fb950" font-family="ui-monospace,Menlo,monospace" font-size="11" text-anchor="end">батчи 1..N ↻</text>
+
+      <!-- modules.map -> hardening (очередь пуста) -->
+      <path d="M 662 92 C 600 140, 560 130, 528 162" fill="none" stroke="#949eae" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="560" y="146" fill="#949eae" font-family="ui-monospace,Menlo,monospace" font-size="11" text-anchor="end">очередь пуста</text>
+
+      <!-- hardening -> done -->
+      <line x1="470" y1="220" x2="452" y2="288" stroke="#949eae" stroke-width="1.5" marker-end="url(#ar)"/>
+
+      <!-- nodes -->
+      <!-- intake -->
+      <rect x="12" y="42" width="96" height="56" rx="10" fill="#151b23" stroke="#2a3444"/>
+      <text x="60" y="66" text-anchor="middle" fill="#e6edf3" font-family="ui-monospace,Menlo,monospace" font-size="13" font-weight="700">intake</text>
+      <text x="60" y="84" text-anchor="middle" fill="#d29922" font-family="ui-monospace,Menlo,monospace" font-size="10">каркас</text>
+
+      <!-- shell-decisions -->
+      <rect x="148" y="42" width="156" height="56" rx="10" fill="#151b23" stroke="rgba(210,153,34,.55)"/>
+      <text x="226" y="66" text-anchor="middle" fill="#e6edf3" font-family="ui-monospace,Menlo,monospace" font-size="13" font-weight="700">shell-decisions</text>
+      <text x="226" y="84" text-anchor="middle" fill="#d29922" font-family="ui-monospace,Menlo,monospace" font-size="10">каркас · самая дорогая</text>
+
+      <!-- skeleton -->
+      <rect x="336" y="42" width="112" height="56" rx="10" fill="#151b23" stroke="#2a3444"/>
+      <text x="392" y="66" text-anchor="middle" fill="#e6edf3" font-family="ui-monospace,Menlo,monospace" font-size="13" font-weight="700">skeleton</text>
+      <text x="392" y="84" text-anchor="middle" fill="#d29922" font-family="ui-monospace,Menlo,monospace" font-size="10">каркас · широта</text>
+
+      <!-- design-system -->
+      <rect x="480" y="42" width="144" height="56" rx="10" fill="#151b23" stroke="rgba(63,185,80,.55)"/>
+      <text x="552" y="66" text-anchor="middle" fill="#e6edf3" font-family="ui-monospace,Menlo,monospace" font-size="13" font-weight="700">design-system</text>
+      <text x="552" y="84" text-anchor="middle" fill="#3fb950" font-family="ui-monospace,Menlo,monospace" font-size="10">полная · ↻ фонд</text>
+
+      <!-- modules.map -->
+      <rect x="660" y="42" width="132" height="56" rx="10" fill="#151b23" stroke="#2a3444"/>
+      <text x="726" y="66" text-anchor="middle" fill="#e6edf3" font-family="ui-monospace,Menlo,monospace" font-size="13" font-weight="700">modules.map</text>
+      <text x="726" y="84" text-anchor="middle" fill="#d29922" font-family="ui-monospace,Menlo,monospace" font-size="10">каркас · очередь</text>
+
+      <!-- refactor -->
+      <rect x="660" y="166" width="132" height="56" rx="10" fill="#151b23" stroke="rgba(63,185,80,.55)"/>
+      <text x="726" y="190" text-anchor="middle" fill="#e6edf3" font-family="ui-monospace,Menlo,monospace" font-size="13" font-weight="700">refactor</text>
+      <text x="726" y="208" text-anchor="middle" fill="#3fb950" font-family="ui-monospace,Menlo,monospace" font-size="10">полная · ↻ цикл</text>
+
+      <!-- hardening -->
+      <rect x="400" y="166" width="140" height="56" rx="10" fill="#151b23" stroke="#2a3444"/>
+      <text x="470" y="190" text-anchor="middle" fill="#e6edf3" font-family="ui-monospace,Menlo,monospace" font-size="13" font-weight="700">hardening</text>
+      <text x="470" y="208" text-anchor="middle" fill="#d29922" font-family="ui-monospace,Menlo,monospace" font-size="10">каркас · §48-аудит</text>
+
+      <!-- done -->
+      <rect x="404" y="292" width="96" height="52" rx="10" fill="#1a2230" stroke="#2a3444" stroke-dasharray="4 4"/>
+      <text x="452" y="323" text-anchor="middle" fill="#949eae" font-family="ui-monospace,Menlo,monospace" font-size="13" font-weight="700">done</text>
+    </svg>
+  </div>
+
+  <!-- ======================= ХРАНИЛИЩА ======================= -->
+  <h2><span class="n">02</span>Хранилища процесса</h2>
+  <p class="lead">
+    Скилл не держит состояние в памяти: всё, что переживает сессии, лежит в целевом
+    проекте. Субагенты стейт не трогают — его двигает только оркестратор.
+  </p>
+  <div class="cards">
+    <div class="card">
+      <h3>.app-build/state.json</h3>
+      <p>Машина: текущая фаза, режим сессии, очередь модулей и под-фазы, драйверы
+      (например <code>styling: tailwind | css-modules</code>,
+      <code>adaptivity: prototype-canon</code>), счётчик решений, список
+      <code>stale</code>. Схема версионируется, миграции описаны в контракте.</p>
+    </div>
+    <div class="card">
+      <h3>.app-build/decisions.md</h3>
+      <p>Журнал договорённостей D-xxx: вопрос / решение / последствия / consumers.
+      Дефолтные ответы тоже фиксируются — иначе регенерация разъедется с прошлым
+      прогоном. Переоткрытие решения отправляет его consumers в <code>stale</code>.</p>
+    </div>
+    <div class="card">
+      <h3>.app-build/artifacts/</h3>
+      <p>Плоды фаз: реестр модулей, реестр дизайн-системы, планы модулей с типами
+      (<code>types.md</code> разблокирует параллельность), отчёты refactor-циклов.</p>
+    </div>
+  </div>
+  <pre><code>### D-007 — Подтверждение e-mail при регистрации
+- Скоуп: shell / модуль auth          # чья договорённость
+- Фаза: shell-decisions               # где принято
+- Вопрос: нужен ли двухшаговый e-mail-флоу?
+- Решение: да, мастер из двух шагов
+- Последствия: auth получает subphase wizard; consumers: skeleton, module:auth
+- Статус: принят 2026-09-01</code></pre>
+
+  <!-- ======================= СЕССИЯ И РЕЕСТР ======================= -->
+  <h2><span class="n">03</span>Сессия и реестр фаз</h2>
+  <p class="lead">
+    На старте сессии оркестратор читает <code>state.json</code> и спрашивает режим:
+    <b>auto</b> — до ближайшего содержательного гейта, <b>step</b> — один шаг с отчётом,
+    <b>pick</b> — выбрать фазу из реестра (в том числе вернуться). Гейты двух сортов:
+    тривиальный («продолжаем?») и содержательный (вопросы с последствиями) —
+    <b>auto</b> останавливается только на содержательных.
+  </p>
+  <table>
+    <thead><tr><th>Фаза</th><th>Файл</th><th>Полнота</th><th>За что отвечает</th></tr></thead>
+    <tbody>
+      <tr><td>intake</td><td>phases/intake.md</td><td><span class="tag frame">каркас</span></td>
+        <td>точка входа: где прототип, какая платформа; заводит хранилища</td></tr>
+      <tr><td>shell-decisions</td><td>phases/shell-decisions.md</td><td><span class="tag frame">каркас</span> <span class="tag reenter">↻</span></td>
+        <td>роутинг, PWA, auth, роли, стартовый модуль, таблица «экран → модуль», владение сущностями</td></tr>
+      <tr><td>skeleton</td><td>phases/skeleton.md</td><td><span class="tag frame">каркас</span> <span class="tag reenter">↻</span></td>
+        <td>все модули пустыми заглушками, layout кликается целиком — ширина раньше глубины</td></tr>
+      <tr><td>design-system</td><td>phases/design-system.md</td><td><span class="tag full">полная</span> <span class="tag reenter">↻</span></td>
+        <td>токены и примитивы (делегирует prototype-to-react) + блоки-повторы прототипа → shared v1 + мобильная адаптация канона (<code>drivers.adaptivity</code>)</td></tr>
+      <tr><td>modules.map</td><td>phases/modules-map.md</td><td><span class="tag frame">каркас</span> <span class="tag reenter">↻</span></td>
+        <td>диспетчер батчей субагентов, изоляция, reduce патчей</td></tr>
+      <tr><td>module-plan</td><td>phases/module-plan.md</td><td><span class="tag frame">каркас</span> <span class="tag reenter">↻</span></td>
+        <td>под-фаза: план-договор модуля (граница, сущности, vm-union, карта компонентов) + типы</td></tr>
+      <tr><td>refactor</td><td>phases/refactor.md</td><td><span class="tag full">полная</span> <span class="tag reenter">↻</span></td>
+        <td>после каждого батча: детект похожих, отчёт кандидатов, канонизация в shared</td></tr>
+      <tr><td>hardening</td><td>phases/hardening.md</td><td><span class="tag frame">каркас</span> <span class="tag reenter">↻</span></td>
+        <td>§48-аудит экранов, доки модулей, чистая сборка</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ======================= ПАРАЛЛЕЛИЗМ ======================= -->
+  <h2><span class="n">04</span>Параллелизм</h2>
+  <div class="split">
+    <div class="card">
+      <h3>map-reduce между модулями</h3>
+      <p>По субагенту на модуль батча. Агент пишет <b>только в папку своего модуля</b>;
+      <code>shared/</code>, конфиги shell и чужие модули закрыты — нужные изменения
+      возвращаются патч-предложением, применяет оркестратор на reduce.
+      Preset-модуль — 1 агент; крупный домен — 2; сквозные сетки — отдельным батчем.</p>
+    </div>
+    <div class="card">
+      <h3>types-first внутри модуля</h3>
+      <p>План первым коммитом выпускает типы — домен, интерфейс сервиса и
+      типизированный <b>union vm</b> (режимы × состояния §48, не булевы флаги).
+      Дальше сервис и вьюхи пишутся параллельно, контроллер — клей поверх готовых типов.</p>
+    </div>
+  </div>
+  <div class="flowline">
+    <span class="step">plan</span><span class="op">→</span>
+    <span class="step hot">types (первый коммит)</span><span class="op">→</span>
+    <span class="step">service</span><span class="op">∥</span>
+    <span class="step">views</span><span class="op">→</span>
+    <span class="step">glue (контроллер)</span><span class="op">→</span>
+    <span class="step">review</span>
+  </div>
+
+  <!-- ======================= КЛАССИФИКАТОР ======================= -->
+  <h2><span class="n">05</span>Классификатор уровней компонентов</h2>
+  <p class="lead">
+    Единое решающее дерево «куда кладём компонент» для планов модулей и refactor.
+    Порядок вопросов важен: домен доминирует. Подъём в shared — канонизация по
+    разметке прототипа, расхождения уходят в пропсы; копипаста общего предка запрещена.
+  </p>
+  <pre class="tree"><code><span class="q">Компонент знает домен (сущности предметики, статусы, сервис)?</span>
+<span class="arrow">├─ ДА →</span> <span class="lvl page">СТРАНИЦА</span>   src/ui/pages/&lt;module&gt;/…  · 2+ режимов → подпапки (wizard/, detail/)
+<span class="arrow">├─ НЕТ, знает каркас (навигация, роли, layout)? →</span> <span class="lvl widget">ВИДЖЕТ</span>
+<span class="arrow">├─ НЕТ, есть второй потребитель (повтор)? →</span> <span class="lvl block">БЛОК shared</span>  канонизация, не копипаста
+<span class="arrow">└─ НЕТ, только форма/презентация →</span> <span class="lvl primitive">ПРИМИТИВ ui</span>  токены и только токены в пропах</code></pre>
+
+  <!-- ======================= ЗАМЕНЯЕМОСТЬ ======================= -->
+  <h2><span class="n">06</span>Заменяемость блоков</h2>
+  <p class="lead">Скилл задуман как набор сменных промтов — развивать и тестировать блоки можно по отдельности.</p>
+  <div class="cards">
+    <div class="card"><h3>L1 · файл</h3>
+      <p>Фаза целиком — сменный промт: переписать <code>phases/x.md</code> по контракту
+      из <code>phase-contract.md</code>. Развитие скилла — чаще всего L1-правка.</p></div>
+    <div class="card"><h3>L2 · драйвер</h3>
+      <p>Вариант по ключу из <code>state.json</code>: <code>drivers.styling →
+      drivers/styling/tailwind.md | css-modules.md</code>,
+      <code>drivers.adaptivity → drivers/adaptivity/prototype-canon.md</code>
+      (мобильная адаптация десктопного прототипа). Смена одного ключа меняет
+      конвенции всех фаз, не переписывая их.</p></div>
+    <div class="card"><h3>L3 · пример</h3>
+      <p>Канонический пример внутри текста фазы (<code>&lt;!-- L3 --&gt;</code>) —
+      подменяется под проект локально, без перестройки фазы.</p></div>
+  </div>
+
+  <footer>
+    Исходник истины — файлы скилла в репозитории платформы (<code>skills/prototype-to-app</code>).
+    Запуск из проекта-потребителя — без глобальной регистрации: в памяти проекта
+    (MEMORY.md) лежит реестр скиллов платформы, агент резолвит путь
+    <code>skills/&lt;name&gt;/SKILL.md</code> (монорепо — от корня репо; плагин — сиблинги;
+    внешний проект — из <code>node_modules/shell-kit</code>) и читает его как промт-оркестратор.
+    <pre><code>skills/prototype-to-app/
+├── SKILL.md                     # оркестратор: граф, режимы, реестр, параллелизм, правила
+├── docs/index.html              # эта страница
+└── references/
+    ├── state-contract.md        # .app-build/ — state.json, decisions D-xxx, миграции
+    ├── phase-contract.md        # единый контракт фазы + шаблон + как добавить фазу
+    ├── classifiers/component-levels.md
+    ├── drivers/styling/{tailwind,css-modules}.md
+    ├── drivers/adaptivity/prototype-canon.md
+    └── phases/{intake,shell-decisions,skeleton,design-system,
+                modules-map,module-plan,refactor,hardening}.md</code></pre>
+  </footer>
+</div>
+</body>
+</html>

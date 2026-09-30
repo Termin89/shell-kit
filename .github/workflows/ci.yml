@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      # npm ci запускает prepare → build:lib (путь git-зависимости
+      # проверяется здесь же)
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build:lib
+      - run: node scripts/validate-plugin.mjs
+      # Список файлов пакета: только dist/skills/README (+ package.json)
+      - run: npm pack --dry-run

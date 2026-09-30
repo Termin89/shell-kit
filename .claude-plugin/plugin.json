@@ -1,0 +1,8 @@
+{
+  "name": "shell-kit",
+  "version": "0.1.0",
+  "description": "Скиллы платформы shell-kit: prototype-to-app, feature, module-pass, components, service, deploy, production, storybook, doc-sync, improvements, product-analysis",
+  "author": {
+    "name": "Termin89"
+  }
+}

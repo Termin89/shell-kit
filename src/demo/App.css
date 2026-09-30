@@ -1,0 +1,575 @@
+/* ----- Каркас демо ----- */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  text-align: left;
+}
+
+.app-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  font-size: 24px;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.app-tag {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.app-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  align-items: center;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  margin-right: 4px;
+}
+
+.toolbar-btn {
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    color 0.2s;
+}
+
+.toolbar-btn:hover {
+  border-color: var(--accent-border);
+}
+
+.toolbar-btn[aria-pressed="true"] {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.toolbar-btn[aria-current="page"] {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  padding: 24px;
+}
+
+.app-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.module-placeholder {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 48px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  color: var(--text);
+}
+
+/* ----- Splash / ошибка bootstrap ----- */
+
+.app-splash {
+  min-height: 60svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.app-splash-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 40px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  color: var(--text);
+}
+
+.app-splash-card--error {
+  border-style: solid;
+  border-color: color-mix(in srgb, #e11d48 35%, var(--border));
+}
+
+.app-splash-card--error p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.app-splash-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: app-splash-spin 0.8s linear infinite;
+}
+
+@keyframes app-splash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ----- Панель модуля (общая база, акцент через --m) ----- */
+
+.module-panel {
+  --m: var(--accent);
+  flex: 1;
+  border-radius: 14px;
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--m) 35%, var(--border));
+  background:
+    radial-gradient(
+      120% 90% at 0% 0%,
+      color-mix(in srgb, var(--m) 10%, transparent),
+      transparent 55%
+    ),
+    var(--bg);
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.module-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text-h);
+}
+
+.module-header p {
+  font-size: 13px;
+}
+
+.module-badge {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--m);
+}
+
+.module-state {
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px dashed color-mix(in srgb, var(--m) 35%, var(--border));
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* ----- Контент модулей ----- */
+
+/* A · Каталог — фиолетовый */
+.module-a {
+  --m: #7c5cff;
+}
+
+.module-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.module-items li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--m) 8%, var(--code-bg));
+}
+
+.module-items code {
+  margin-left: auto;
+}
+
+.module-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--m);
+}
+
+/* B · Аналитика — бирюзовый */
+.module-b {
+  --m: #0ea5a4;
+}
+
+.module-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.module-stat {
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--m) 30%, var(--border));
+}
+
+.module-stat b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 26px;
+  color: var(--m);
+}
+
+.module-stat span {
+  font-size: 13px;
+}
+
+/* C · Настройки — янтарный */
+.module-c {
+  --m: #d97706;
+}
+
+.module-settings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 420px;
+}
+
+.module-settings li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--m) 8%, var(--code-bg));
+}
+
+.module-switch {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--m) 40%, var(--border));
+  background: var(--code-bg);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.module-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+
+.module-switch[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--m) 30%, transparent);
+  border-color: var(--m);
+}
+
+.module-switch[aria-pressed="true"]::after {
+  transform: translateX(18px);
+  background: var(--m);
+}
+
+/* D · Медленная загрузка — синий */
+.module-d {
+  --m: #2563eb;
+}
+
+.module-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 120px;
+  margin-top: 4px;
+}
+
+.module-chart span {
+  flex: 1;
+  border-radius: 6px 6px 0 0;
+  border-bottom: 2px solid var(--m);
+  background: color-mix(in srgb, var(--m) 60%, transparent);
+}
+
+/* E · Нестабильная загрузка — розовый */
+.module-e {
+  --m: #e11d48;
+}
+
+/* Пара report-full / report-lite — один маршрут /report, выбор по scope */
+.module-report-full {
+  --m: #4f46e5;
+}
+
+.module-report-lite {
+  --m: #db2777;
+}
+
+.module-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.module-step {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 13px;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.module-step--fail {
+  background: color-mix(in srgb, #e11d48 12%, transparent);
+  border-color: color-mix(in srgb, #e11d48 35%, var(--border));
+  color: #e11d48;
+}
+
+.module-step--ok {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  border-color: color-mix(in srgb, #16a34a 35%, var(--border));
+  color: #16a34a;
+}
+
+/* ----- Панель кейсов ----- */
+
+.app-cases {
+  padding: 0 24px 24px;
+}
+
+.app-cases h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+.cases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.case {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--code-bg) 60%, var(--bg));
+}
+
+.case h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--text-h);
+}
+
+.case p {
+  font-size: 13px;
+}
+
+/* ----- Статус-бар ----- */
+
+.status-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.status-chip {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.status-chip.is-loaded {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.status-chip.is-loading {
+  color: var(--text);
+  border-style: dashed;
+}
+
+/* ----- Прочее ----- */
+
+.toolbar-btn--ghost {
+  border-style: dashed;
+  color: var(--text);
+}
+
+/* ----- Модуль F: заказы (сервисный стек) ----- */
+
+.module-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(220, 60, 60, 0.4);
+  background: rgba(220, 60, 60, 0.07);
+  color: #b3261e;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.orders-table th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.orders-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.orders-table td:last-child,
+.orders-table th:last-child {
+  text-align: right;
+}
+
+.orders-status {
+  display: inline-block;
+  font-size: 13px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.orders-status.is-new {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.orders-status.is-paid {
+  color: #16794b;
+  border-color: rgba(22, 121, 75, 0.45);
+}
+
+.orders-status.is-shipped {
+  color: #9a6b0c;
+  border-color: rgba(154, 107, 12, 0.45);
+}
+
+.orders-status.is-done {
+  color: var(--text);
+  border-style: dashed;
+}
+
+/* ----- Тосты (toastHandler шины ошибок) ----- */
+
+.toast-bar {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+  max-width: min(360px, calc(100vw - 40px));
+}
+
+.toast {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  font-size: 14px;
+}
+
+.toast--error {
+  border-color: rgba(220, 60, 60, 0.45);
+  color: #b3261e;
+}
+
+.toast--warn {
+  border-color: rgba(154, 107, 12, 0.45);
+  color: #9a6b0c;
+}
+
+.toast--info {
+  color: var(--text-h);
+}

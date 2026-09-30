@@ -1,0 +1,481 @@
+/**
+ * Универсальные структурные классы примитивов (изначально — дизайн-система
+ * «Клуб U-kon», prototype/assets/app.css; концепция gemba-walks-demo).
+ *
+ * Файл не знает Tailwind: проект импортирует его в свой theme.css
+ * (после `@import "tailwindcss"`) и объявляет токены. Классы опираются
+ * на контракт переменных:
+ *
+ *   Цвета:  --color-navy, -navy-700, -accent, -accent-700, -accent-soft,
+ *           -surface, -surface-2, -line, -ink, -ink-muted, -ink-faint,
+ *           -success, -success-bg, -warn, -warn-bg, -danger, -danger-bg,
+ *           -info-bg, -info-fg
+ *   Радиусы: --radius-r-sm, --radius-r, --radius-r-lg, --radius-pill
+ *
+ * Слоистость (Tailwind v4): classes < utilities — утилиты проекта
+ * всегда сильнее структурных классов.
+ */
+
+@layer components {
+  /* Icon */
+  .ic {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ic-sm {
+    width: 16px;
+    height: 16px;
+  }
+
+  .ic-lg {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Button */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    background: var(--color-surface-2);
+    color: var(--color-ink);
+    transition:
+      transform 0.12s,
+      background 0.15s,
+      box-shadow 0.15s,
+      border-color 0.15s;
+  }
+
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+  }
+
+  .btn .ic {
+    width: 18px;
+    height: 18px;
+  }
+
+  .btn-primary {
+    background: var(--color-navy);
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: var(--color-navy-700);
+  }
+
+  .btn-accent {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  .btn-accent:hover {
+    background: var(--color-accent-700);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--color-line);
+    color: var(--color-ink);
+  }
+
+  .btn-ghost:hover {
+    background: var(--color-surface-2);
+    border-color: #d7dbe1;
+  }
+
+  .btn-soft {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-700);
+  }
+
+  .btn-soft:hover {
+    background: #dce8fd;
+  }
+
+  .btn-lg {
+    padding: 13px 22px;
+    font-size: 15px;
+  }
+
+  .btn-sm {
+    padding: 7px 13px;
+    font-size: 13px;
+  }
+
+  .btn-block {
+    width: 100%;
+  }
+
+  /* Icon button */
+  .iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-ink-muted);
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .iconbtn:hover {
+    background: var(--color-surface-2);
+    color: var(--color-ink);
+  }
+
+  /* Card */
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-r);
+    box-shadow: 0 1px 2px rgba(16, 33, 60, 0.05),
+      0 1px 3px rgba(16, 33, 60, 0.05);
+  }
+
+  .card-hover {
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s,
+      border-color 0.15s;
+  }
+
+  .card-hover:hover,
+  .card-hover:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px -14px rgba(16, 33, 60, 0.18);
+    border-color: #d7dbe1;
+  }
+
+  /* Отклик на нажатие: карточка «прижимается» вместо подъёма —
+     мгновенная обратная связь тапа/клика до перехода. */
+  .card-hover:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 14px -8px rgba(16, 33, 60, 0.16);
+    border-color: #d7dbe1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-hover {
+      transition: none;
+    }
+  }
+
+  /* Nav item (sidebar / bottom nav) */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--color-ink-muted);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .nav-item:hover {
+    background: var(--color-surface-2);
+    color: var(--color-ink);
+  }
+
+  .nav-item.is-active {
+    background: var(--color-accent-soft);
+    color: var(--color-navy);
+    font-weight: 600;
+  }
+
+  /* Nav list — «скользящий» активный фон (NavList): пилюля акцента
+     переезжает на активный пункт (transform/height — NavList измеряет
+     пункт и двигает элемент). Пункты позиционированы — пишут поверх
+     абсолютной пилюли; активный внутри списка фон теряет (пилюля
+     вместо него, hover тоже не перекрывает). Токены: длительность/
+     кривая — --nav-indicator-*, лёгкий overshoot по умолчанию. */
+  .nav-list {
+    position: relative;
+  }
+
+  .nav-list > .nav-item {
+    position: relative;
+  }
+
+  .nav-list > .nav-item.is-active,
+  .nav-list > .nav-item.is-active:hover {
+    background: transparent;
+  }
+
+  .nav-indicator {
+    --nav-indicator-duration: 0.28s;
+    --nav-indicator-easing: cubic-bezier(0.3, 1.2, 0.3, 1);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    border-radius: 12px;
+    background: var(--color-accent-soft);
+    transition:
+      transform var(--nav-indicator-duration) var(--nav-indicator-easing),
+      height var(--nav-indicator-duration) var(--nav-indicator-easing),
+      opacity 0.15s;
+    will-change: transform;
+  }
+
+  /* Chip */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-ink-muted);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      background 0.15s,
+      color 0.15s,
+      border-color 0.15s,
+      scale 0.12s;
+  }
+
+  /* Press-фидбек: scale-свойство (не transform) — не конфликтует
+     с keyframes chip-pop, они складываются. */
+  .chip:active {
+    scale: 0.94;
+  }
+
+  .chip:hover {
+    color: var(--color-ink);
+  }
+
+  .chip.is-active {
+    background: var(--color-navy);
+    border-color: var(--color-navy);
+    color: #fff;
+  }
+
+  /* Переключение чипа — пружинящий pop: недолёт 0.88 + back-easing
+     с перелётом ~1.02 и возвратом. Класс `.chip-pop` ставит React
+     (Chip.tsx) только по факту перехода false→true; первичный mount
+     активного чипа не анимируется. */
+  .chip.chip-pop {
+    animation: chip-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes chip-pop {
+    from {
+      transform: scale(0.88);
+    }
+
+    to {
+      transform: scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chip:active {
+      scale: 1;
+    }
+
+    .chip.chip-pop {
+      animation: none;
+    }
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .badge-success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+  }
+
+  .badge-warn {
+    background: var(--color-warn-bg);
+    color: var(--color-warn);
+  }
+
+  /* Gold — акцент «генерального» статуса (токен задаёт проект). */
+  .badge-gold {
+    background: var(--color-gold-bg);
+    color: var(--color-gold);
+  }
+
+  .badge-danger {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+  }
+
+  .badge-info {
+    background: var(--color-info-bg);
+    color: var(--color-info-fg);
+  }
+
+  .badge-neutral {
+    background: var(--color-surface-2);
+    color: var(--color-ink-muted);
+  }
+
+  /* Avatar */
+  .avatar {
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--color-surface-2);
+  }
+
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+  }
+
+  .avatar-md {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Page head */
+  .page-head h1 {
+    font-size: 24px;
+  }
+
+  .page-head .sub {
+    margin-top: 4px;
+    color: var(--color-ink-muted);
+    font-size: 14px;
+  }
+
+  /* Searchbar */
+  .searchbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-ink-faint);
+  }
+
+  .searchbar input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font: inherit;
+    color: var(--color-ink);
+  }
+
+  .searchbar input::placeholder {
+    color: var(--color-ink-faint);
+  }
+
+  /* Page enter — появление страницы при смене модуля.
+     Механизм: ModuleRenderer ставит data-page-enter="<имя>" на обёртку
+     контента; вариант — имя, реализация — эти правила (или свои в
+     theme.css проекта — просто ещё один селектор по атрибуту).
+     Только композиторные свойства (transform/opacity), «оба» кадра —
+     из keyframes. Длительность/кривая — токены: тюнинг без новых
+     правил; prefers-reduced-motion выключает целиком. */
+  [data-page-enter] {
+    --page-enter-duration: 0.22s;
+    --page-enter-easing: cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  [data-page-enter="fade"] {
+    animation: page-enter-fade var(--page-enter-duration)
+      var(--page-enter-easing) both;
+  }
+
+  [data-page-enter="fade-up"] {
+    animation: page-enter-fade-up var(--page-enter-duration)
+      var(--page-enter-easing) both;
+  }
+
+  [data-page-enter="scale"] {
+    animation: page-enter-scale var(--page-enter-duration)
+      var(--page-enter-easing) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-page-enter] {
+      animation: none;
+    }
+
+    .nav-indicator {
+      transition: none;
+    }
+  }
+}
+
+@keyframes page-enter-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes page-enter-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes page-enter-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
