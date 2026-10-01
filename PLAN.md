@@ -22,6 +22,7 @@
 | Моки | флаги + seed **per-service**; приоритет URL > localStorage > env; `MockPanel` отдельным экспортом, монтирует consumer |
 | Codegen | парсит **интерфейсы сервисов** (хуки зовут диспетчер → моки работают); `get*/find*/list*/load*` → query, остальное mutation, `@query`/`@mutation` — override; генерируются только хуки, контроллер руками |
 | Хуки (runtime) | `useServiceQuery` / `useServiceMutation` — перенос из gemba-walks без изменений |
+| Solid-адаптер | слой `src/solid` (2026-10-01, зеркалит react): провайдер/гейт/рендерер/хуки + router/queries-связки; framework-free ядра (router/queries) переиспользуются as-is (solid импортирует их из файлов, не из React-реэкспортирующих index-ов); queries — **ручной порт** React-версии, не createProjection — семантический паритет важнее идиоматики; UI-примитивы не портируются; вторая lib-сборка `build:lib-solid` пишет **только** `dist/solid` (чанки общих модулей отбрасываются — react-часть диста не меняется); `solid-js`/`@solidjs/web` (`2.0.0-rc.13`, стабильного 2.x нет) — optional peers: react-потребители solid не ставят |
 | Errors | classifier + bus + handlers — перенос без изменений |
 | Permissions | порт `computePermissions`; используются внутри `enabled`-предикатов, отдельного механизма в ядре нет |
 

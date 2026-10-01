@@ -1,10 +1,10 @@
 # shell-kit
 
-Библиотека модульных приложений: headless-ядро Shell + React-адаптер.
-Модули — независимые мини-приложения со своим доменом и чанком; Shell
-решает, **какие из них видимы** в текущем контексте. Дистрибуция —
-git-зависимость (`github:Termin89/shell-kit#<tag>`), сборка пакета —
-`prepare`-скриптом при установке.
+Библиотека модульных приложений: headless-ядро Shell + адаптеры React
+и Solid 2. Модули — независимые мини-приложения со своим доменом и
+чанком; Shell решает, **какие из них видимы** в текущем контексте.
+Дистрибуция — git-зависимость (`github:Termin89/shell-kit#<tag>`),
+сборка пакета — `prepare`-скриптом при установке.
 
 Глубокий разбор архитектуры — [MAP.md](MAP.md). Зачем существует и в чём
 ценность — [VALUE.md](VALUE.md). Разбор на живом ТЗ — [CASE-U-KON.md](CASE-U-KON.md).
@@ -12,10 +12,15 @@ git-зависимость (`github:Termin89/shell-kit#<tag>`), сборка п�
 
 ## Установка
 
-Node ≥ 20, React 19 (peer):
+Node ≥ 20. Peer-зависимости optional — ставится только то, что
+используется: React 19 для `shell-kit/react`, `solid-js` +
+`@solidjs/web` (`2.0.0-rc.13`, dist-tag `next`) для `shell-kit/solid`:
 
 ```bash
+# React-потребитель
 npm install github:Termin89/shell-kit#v0.1.0 react react-dom
+# Solid-потребитель
+npm install github:Termin89/shell-kit#v0.1.0 solid-js@2.0.0-rc.13 @solidjs/web@2.0.0-rc.13
 ```
 
 `prepare`-скрипт пакета собирает `dist/` при установке (нужны devDeps
@@ -90,6 +95,44 @@ export default defineModule({
 навигационный каркас); роутинг URL — слой `shell-kit/router` по
 желанию.
 
+## Solid-адаптер
+
+Тот же контракт ядра под Solid 2 (`solid-js@2.0.0-rc.13`, стабильного
+2.x пока нет — сидим на RC): провайдер, гейт, рендерер, хуки и
+router/queries-связки — одним входом `shell-kit/solid`. Framework-free
+ядра (router, queries, errors, storage) общие с React-версией;
+UI-примитивы в solid-слой не портированы.
+
+```tsx
+// App.tsx — Solid
+import { Shell } from "shell-kit/core";
+import {
+  ModuleRenderer, RouterProvider, ShellGate, ShellProvider,
+  connectRouter, createBrowserHistory,
+} from "shell-kit/solid";
+
+const shell = new Shell({ initialState: { activeModule: null }, modules });
+const router = connectRouter(shell, createBrowserHistory());
+
+export function App() {
+  return (
+    <ShellProvider shell={shell}>
+      <RouterProvider port={router.port}>
+        <ShellGate>
+          <ModuleRenderer loadingDelay={300} pageTransition="fade" />
+        </ShellGate>
+      </RouterProvider>
+    </ShellProvider>
+  );
+}
+```
+
+Идиоматика Solid 2: реактивные аргументы — геттерами
+(`useMedia(() => ref)`), возврат — аксессоры (`state().activeModule`),
+props не деструктурируются. Семантика `ModuleRenderer` (loadingDelay,
+pageTransition, retry через пересоздание поддерева) — паритет с
+React-версией. Подробности — `src/solid/readme.md`.
+
 ## Субпути пакета
 
 | Импорт | Что даёт |
@@ -97,6 +140,7 @@ export default defineModule({
 | `shell-kit` | всё public-API ядра (корневой вход) |
 | `shell-kit/core` | Shell: реестр, видимость, bootstrap, состояние |
 | `shell-kit/react` | ShellProvider, hooks, ModuleRenderer, ShellGate |
+| `shell-kit/solid` | Solid 2-адаптер: провайдер, hooks, ModuleRenderer, router/queries-связки |
 | `shell-kit/module` | контракт модуля: `defineModule` |
 | `shell-kit/service` | `defineService`: стратегии api/mock per-call |
 | `shell-kit/transport` | HTTP-транспорт: конверт, TransportError |
@@ -126,13 +170,17 @@ export default defineModule({
 ## Демо
 
 ```bash
-npm run dev          # демо-приложение src/demo с HMR
-npm run build:demo   # его же продакшен-сборка
+npm run dev              # демо-приложение src/demo с HMR (:3000)
+npm run build:demo       # его же продакшен-сборка
+npm run dev:solid        # демо src/demo-solid на Solid-адаптере (:3001)
+npm run build:demo-solid # его же продакшен-сборка
 ```
 
-Демо догфудит публичный API: импортирует `shell-kit/<layer>` и
+React-демо догфудит публичный API: импортирует `shell-kit/<layer>` и
 `shell-kit/ui/styles.css`, покрывает фичи ядра (bootstrap, retry,
-варианты, сервисный модуль, mock/api-тумблер).
+варианты, сервисный модуль, mock/api-тумблер). Solid-демо — компактный
+аналог: lazy-загрузка, retry сбойного чанка, loadingDelay, URL-петля
+activeModule ↔ /:module, `useServiceQuery`/`useModuleRoute`.
 
 ## Структура репо
 
@@ -140,15 +188,17 @@ npm run build:demo   # его же продакшен-сборка
 src/
   core/      ядро Shell: реестр, видимость, bootstrap (+ state.md)
   react/     React-адаптер: ShellProvider, hooks, ModuleRenderer
+  solid/     Solid 2-адаптер (зеркалит react/)
   module/    контракт модуля: defineModule
   service/   defineService: стратегии api/mock, per-call диспетчер
   transport/ HTTP-транспорт
   errors/    классификация ошибок, шина, хендлеры
-  queries/   query-порт + хуки
+  queries/   query-порт + React-хуки (связки solid — в src/solid)
   storage/   PersistentMock, медиа
   router/    router-слой (activeModule ↔ URL)
   ui/        универсальный UI-слой + components.css
-  demo/      демо-приложение (витрина public API)
+  demo/      демо-приложение React (витрина public API)
+  demo-solid/ демо на Solid-адаптере
 skills/      11 промт-скиллов платформы (плагин)
 .claude-plugin/   манифесты плагина
 ```
@@ -158,13 +208,16 @@ skills/      11 промт-скиллов платформы (плагин)
 ```bash
 npm ci               # install + prepare (сборка dist/)
 npm run lint         # oxlint
-npm run typecheck    # tsc -b (app + lib проекты)
-npm run build:lib    # сборка пакета в dist/ (preserveModules, ES)
-npm run build:demo   # сборка демо
+npm run typecheck    # tsc -b (app + lib + solid + demo проекты)
+npm run build:lib    # сборка пакета в dist/ (preserveModules, ES):
+                     # react-проход чистит dist, solid-проход
+                     # (build:lib-solid) дописывает dist/solid
+npm run build:demo   # сборка React-демо
+npm run build:demo-solid # сборка Solid-демо
 ```
 
 CI (`.github/workflows/ci.yml`): lint → typecheck → build:lib →
-валидация плагин-манифестов → `npm pack --dry-run`.
+build:demo-solid → валидация плагин-манифестов → `npm pack --dry-run`.
 
 Версионирование: правка ядра → коммит → тег `vX.Y.Z` → push; в
 потребителе `npm update shell-kit`. Скилы версионируются вместе с

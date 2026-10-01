@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.lib.tsbuildinfo",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.solid.tsbuildinfo",
     "target": "es2023",
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
@@ -17,7 +17,10 @@
     "emitDeclarationOnly": true,
     "rootDir": "./src",
     "outDir": "./dist",
-    "jsx": "react-jsx",
+
+    /* Solid 2: JSX компилирует vite-plugin-solid, типы — @solidjs/web */
+    "jsx": "preserve",
+    "jsxImportSource": "@solidjs/web",
 
     /* Linting */
     "noUnusedLocals": true,
@@ -25,6 +28,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
-  "exclude": ["src/demo", "src/demo-solid", "src/solid"]
+  "include": ["src/solid"]
 }

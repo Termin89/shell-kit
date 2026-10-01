@@ -1,6 +1,6 @@
 # shell-core — карта фреймворка (для Miro)
 
-Дата: 2026-08-31. Источники: README.md, VALUE.md, PLAN.md, ISSUES.md,
+Дата: 2026-10-01. Источники: README.md, VALUE.md, PLAN.md, ISSUES.md,
 `src/*` (index-файлы слоёв). Назначение: база для карты в Miro —
 позиционирование, способности слоёв, чего нет и куда развивать.
 
@@ -56,6 +56,7 @@ HTML-прототип / ТЗ
 | `core` | Headless-ядро Shell: реестр модулей, видимость, bootstrap, состояние | `Shell`, `AppState`, `ModuleConfig`, `ShellStatus` | — (zero-deps) |
 | `module` | Контракт модуля | `defineModule` (component/variants + controller) | core (типы) |
 | `react` | React-тулкит: провайдер, гейт, рендерер, хуки | `ShellProvider`, `ShellGate`, `ModuleRenderer`, `useShell*`, `useActiveModules`, `useMedia` | core, storage |
+| `solid` | Solid 2-адаптер (зеркалит react, идномы Solid 2: getter-аргументы, аксессоры) | те же + router/queries-связки (`RouterProvider`, `usePath`, `useServiceQuery`) | core, router, queries, storage |
 | `router` | Опциональная синхронизация activeModule ↔ URL: конвенция `/:module/*` (первый сегмент — shell, хвост — модуль), вкл/выкл из конфига приложения выбором адаптера истории | `RouterPort`, `connectRouter`, `useNavigate`, `useModuleRoute`, `matchPath` | core (только публичный API стора) |
 | `service` | Данные per-call: диспетчер стратегий (mock/api) | `defineService`, `ResolveContext` | core (services-конфиг) |
 | `transport` | HTTP-труба: конверт ответов, типизированные ошибки | `HttpTransport`, `TransportResponse`, `TransportError` | — |
@@ -64,6 +65,7 @@ HTML-прототип / ТЗ
 | `storage` | Локальная персистентность: данные + медиа | `configureStorage`, `dataCollection`, `putMedia`/`seedMedia`, `resolveMediaUrl`, `clearStorage`, `PersistentMock` | — (browser API) |
 | `ui` | Универсальные UI-примитивы на структурных классах | `cx`, `createIcon`, `Button/Card/Chip/…`, `components.css` | — (токены даёт проект) |
 | learning: `demo` | Эталон — онбординг людей и few-shot для LLM; dogfood публичного API (импортирует пакет по имени) | демо-модуль на полном стеке | все слои |
+| learning: `demo-solid` | Компактный эталон Solid-адаптера: lazy/retry/loadingDelay, URL-петля, useServiceQuery | модули ok/broken/slow | все слои (через `solid`) |
 
 **Стрелки зависимостей (связи на доске):**
 
@@ -77,6 +79,10 @@ HTML-прототип / ТЗ
                                                 └─→ storage (mock-стратегия)
 transport ─→ errors (ошибка → classify → шина → хендлеры)
 ```
+
+`solid` — те же рёбра, что у `react` (core, storage/useMedia), плюс
+router/queries-связки поверх **общих** framework-free ядер: адаптеры —
+тонкие связки, ядро одно. UI-примитивы в solid-слой не портированы.
 
 **Потребители — вне фреймворка.** Проект-потребитель (отдельный репо,
 npm-зависимость shell-kit) приносит: свои токены (theme.css), домен,
@@ -114,6 +120,16 @@ npm-зависимость shell-kit) приносит: свои токены (t
 ---
 
 ## 3. React-тулкит (`src/react`) — отдельный блок
+
+**Solid 2-адаптер (`src/solid`, 2026-10-01)** зеркалит набор react:
+те же провайдер/гейт/рендерер (семантика loadingDelay/pageTransition —
+паритет), те же хуки + router/queries-связки (`RouterProvider`,
+`usePath`, `useModuleRoute`, `useServiceQuery`). Идиоматика Solid 2
+(`solid-js@2.0.0-rc.13`, optional peer): реактивные аргументы —
+геттерами, возврат — аксессоры, подписки — в `onSettled`, retry —
+пересозданием поддерева (keyed `<Show>`). queries — ручной порт
+React-версии, не createProjection: семантический паритет важнее
+идиоматики. Экспорт — `shell-kit/solid`.
 
 Тонкий адаптер: вся логика в headless-ядре, React — только связка.
 Адаптер заменяем (другой рантайм не ломает ядро).
@@ -191,6 +207,7 @@ mock-флаг = id сервиса; JSDoc с примерами; в проект�
 | Запросы: кеш/дедуп/инвалидация + хуки | ✅ |
 | Персистентность: данные + медиа + персистентный мок | ✅ (сверх плана) |
 | UI-примитивы + фабрика иконок | ✅ |
+| Solid 2-адаптер (`shell-kit/solid`, optional peers, вторая lib-сборка) | ✅ |
 | URL: синхронизация activeModule ↔ адрес (слой router, вкл/выкл из конфига) | ✅ |
 | Обучающий контур: demo + practice | ✅ (сверх плана) |
 | Типизированный клиент над транспортом (endpoint-map, интерцепторы) | ⬜ в плане |

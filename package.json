@@ -2,7 +2,7 @@
   "name": "shell-kit",
   "private": true,
   "version": "0.1.0",
-  "description": "Модульный каркас React-приложений: реестр модулей, сервис-слой (mock/api), transport, query-порт, UI-кит и router-слой",
+  "description": "Модульный каркас приложений: реестр модулей, сервис-слой (mock/api), transport, query-порт, UI-кит, router-слой и адаптеры React/Solid",
   "license": "MIT",
   "type": "module",
   "sideEffects": ["**/*.css"],
@@ -13,9 +13,12 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:solid": "vite --mode demo-solid",
     "build": "npm run build:lib",
-    "build:lib": "vite build --mode lib",
+    "build:lib": "vite build --mode lib && npm run build:lib-solid",
+    "build:lib-solid": "vite build --mode lib-solid",
     "build:demo": "vite build",
+    "build:demo-solid": "vite build --mode demo-solid",
     "typecheck": "tsc -b",
     "lint": "oxlint",
     "preview": "vite preview",
@@ -55,6 +58,10 @@
       "types": "./dist/service/index.d.ts",
       "import": "./dist/service/index.js"
     },
+    "./solid": {
+      "types": "./dist/solid/index.d.ts",
+      "import": "./dist/solid/index.js"
+    },
     "./storage": {
       "types": "./dist/storage/index.d.ts",
       "import": "./dist/storage/index.js"
@@ -73,18 +80,37 @@
   "files": ["dist", "skills", "README.md"],
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "solid-js": "^2.0.0-rc.13",
+    "@solidjs/web": "^2.0.0-rc.13"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    },
+    "@solidjs/web": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "@solidjs/web": "2.0.0-rc.13",
     "oxlint": "^1.75.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "solid-js": "2.0.0-rc.13",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
-    "vite-plugin-dts": "^5.0.3"
+    "vite-plugin-dts": "^5.0.3",
+    "vite-plugin-solid": "3.0.0-next.27"
   }
 }

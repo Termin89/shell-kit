@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import solid from "vite-plugin-solid";
 import path from "path";
 import fs from "node:fs";
 import dts from "vite-plugin-dts";
@@ -43,6 +44,50 @@ const libConfig = {
   outDir: "dist",
 };
 
+// Solid-сборка пишет ТОЛЬКО dist/solid: preserveModules тащит в граф
+// общие framework-free модули (router/queries/errors/storage), но их
+// уже излучила react-сборка. Состав графов у проходов разный, тришейкин
+// дал бы другие байты и перезаписал бы react-вывод — чужие чанки
+// выбрасываем до записи. Импорты из dist/solid/*.js
+// («../router/port.js») указывают на файлы react-прохода.
+function keepSolidChunksOnly(): Plugin {
+  return {
+    name: "keep-solid-chunks-only",
+    generateBundle(_, bundle) {
+      for (const file of Object.keys(bundle)) {
+        if (!file.startsWith("solid/")) {
+          delete bundle[file];
+        }
+      }
+    },
+  };
+}
+
+// Вторая lib-сборка — Solid-адаптер (src/solid). Собирается ПОСЛЕ
+// react-сборки: та чистит dist и излучает общие framework-free слои,
+// эта дописывает только dist/solid поверх (emptyOutDir: false).
+const libSolidConfig = {
+  lib: {
+    entry: { "solid/index": path.resolve(__dirname, "src/solid/index.ts") },
+    formats: ["es" as const],
+  },
+  rollupOptions: {
+    // solid-js и @solidjs/web — внешние (optional peerDependencies)
+    external: ["solid-js", "@solidjs/web"],
+    plugins: [keepSolidChunksOnly()],
+    output: {
+      preserveModules: true,
+      // «src», не «src/solid»: чанки solid-слоя получают имена
+      // «solid/...» и ложатся в dist/solid
+      preserveModulesRoot: "src",
+      entryFileNames: "[name].js",
+    },
+  },
+  sourcemap: true,
+  outDir: "dist",
+  emptyOutDir: false,
+};
+
 // Копия CSS-слоя в dist: экспорт shell-kit/ui/styles.css указывает
 // на dist/ui/components.css, исходник живёт рядом с компонентами ядра
 function copyComponentsCss(): Plugin {
@@ -59,31 +104,59 @@ function copyComponentsCss(): Plugin {
 }
 
 export default defineConfig(({ mode }) => {
-  const isLib = mode === "lib"; // сборка npm-пакета ядра
+  const isLib = mode === "lib"; // сборка npm-пакета ядра (react)
+  const isLibSolid = mode === "lib-solid"; // сборка npm-пакета (solid)
+  const isDemoSolid = mode === "demo-solid"; // демо на Solid-адаптере
+  const isLibMode = isLib || isLibSolid;
+  // JSX-трансформы не пересекаются: react-режимы — plugin-react,
+  // solid-режимы — plugin-solid (два несовместимых компилятора JSX)
+  const isSolidMode = isLibSolid || isDemoSolid;
 
   return {
-    // Dev/preview/build демо — от src/demo, сборка библиотеки — от корня
-    root: isLib ? __dirname : path.resolve(__dirname, "src/demo"),
-    // Публичные ассеты (favicon и т.п.) — только для демо-режима,
+    // Dev/preview/build демо — от src/demo (или src/demo-solid),
+    // сборка библиотеки — от корня
+    root: isLibMode
+      ? __dirname
+      : path.resolve(__dirname, isDemoSolid ? "src/demo-solid" : "src/demo"),
+    // Публичные ассеты (favicon и т.п.) — только для демо-режимов,
     // в npm-пакет они не идут
-    publicDir: isLib ? false : "public",
-    plugins: [
-      react(),
-      // Типы пакета генерируются lib-сборкой (tsc-эмит и dts-плагин
-      // используют tsconfig.lib.json); демо-сборке они не нужны
-      ...(isLib
-        ? [
-            dts({
-              include: ["src/**/*"],
-              exclude: ["src/demo/**"],
-              tsconfigPath: "./tsconfig.lib.json",
-              outDirs: ["dist"],
-              entryRoot: "src",
-            }),
-            copyComponentsCss(),
-          ]
-        : []),
-    ],
+    publicDir: isLibMode ? false : "public",
+    plugins: isSolidMode
+      ? [
+          solid(),
+          // Типы solid-слоя генерирует lib-solid-сборка; демо-сборке
+          // они не нужны
+          ...(isLibSolid
+            ? [
+                dts({
+                  include: ["src/solid/**/*"],
+                  tsconfigPath: "./tsconfig.solid.json",
+                  outDirs: ["dist"],
+                  // «src», не «src/solid»: entryRoot — база, от которой
+                  // отсчитывается путь декларации, при «src/solid»
+                  // файлы ложатся в корень dist
+                  entryRoot: "src",
+                }),
+              ]
+            : []),
+        ]
+      : [
+          react(),
+          // Типы пакета генерируются lib-сборкой (tsc-эмит и dts-плагин
+          // используют tsconfig.lib.json); демо-сборке они не нужны
+          ...(isLib
+            ? [
+                dts({
+                  include: ["src/**/*"],
+                  exclude: ["src/demo/**", "src/demo-solid/**", "src/solid/**"],
+                  tsconfigPath: "./tsconfig.lib.json",
+                  outDirs: ["dist"],
+                  entryRoot: "src",
+                }),
+                copyComponentsCss(),
+              ]
+            : []),
+        ],
     resolve: {
       alias: [
         // Догфудинг публичного API: демо (и dev-режим ядра) импортируют
@@ -98,12 +171,19 @@ export default defineConfig(({ mode }) => {
         },
       ],
     },
-    build: isLib ? libConfig : {
-      outDir: path.resolve(__dirname, "demo/dist"),
-      sourcemap: true,
-    },
+    build: isLib
+      ? libConfig
+      : isLibSolid
+        ? libSolidConfig
+        : {
+            outDir: path.resolve(
+              __dirname,
+              isDemoSolid ? "demo/dist-solid" : "demo/dist",
+            ),
+            sourcemap: true,
+          },
     server: {
-      port: 3000,
+      port: isDemoSolid ? 3001 : 3000,
     },
   };
 });

@@ -23,6 +23,9 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build:lib
+      # Демо на Solid-адаптере: ловит гниение demo-solid и solid-ветки
+      # vite-конфига (JSX-трансформы не пересекаются с react-режимом)
+      - run: npm run build:demo-solid
       - run: node scripts/validate-plugin.mjs
       # Список файлов пакета: только dist/skills/README (+ package.json)
       - run: npm pack --dry-run
