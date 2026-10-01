@@ -7,7 +7,7 @@ End-to-end онбординг потребителя: от пустой папк
 
 ```bash
 mkdir my-app && cd my-app && npm init -y
-npm install github:Termin89/shell-kit#v0.1.0 react react-dom
+npm install github:Termin89/shell-kit#v0.2.0 react react-dom
 npm install -D vite @vitejs/plugin-react typescript \
   @types/react @types/react-dom
 ```
