@@ -1,7 +1,7 @@
 {
   "name": "shell-kit",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Модульный каркас приложений: реестр модулей, сервис-слой (mock/api), transport, query-порт, UI-кит, router-слой и адаптеры React/Solid",
   "license": "MIT",
   "type": "module",

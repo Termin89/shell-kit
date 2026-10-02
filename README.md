@@ -18,9 +18,9 @@ Node ≥ 20. Peer-зависимости optional — ставится толь�
 
 ```bash
 # React-потребитель
-npm install github:Termin89/shell-kit#v0.2.0 react react-dom
+npm install github:Termin89/shell-kit#v0.3.0 react react-dom
 # Solid-потребитель
-npm install github:Termin89/shell-kit#v0.2.0 solid-js@2.0.0-rc.13 @solidjs/web@2.0.0-rc.13
+npm install github:Termin89/shell-kit#v0.3.0 solid-js@2.0.0-rc.13 @solidjs/web@2.0.0-rc.13
 ```
 
 `prepare`-скрипт пакета собирает `dist/` при установке (нужны devDeps

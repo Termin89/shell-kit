@@ -10,7 +10,7 @@
     {
       "name": "shell-kit",
       "source": "./",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "description": "Скиллы платформы shell-kit: конвейер prototype-to-app, доработки feature/components/service, проходы module-pass, deploy/production, storybook, доки"
     }
   ]
