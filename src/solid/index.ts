@@ -26,6 +26,18 @@ export {
 export type { ActiveModule } from "./hooks";
 export { getModuleComponent } from "./module-lazy";
 export type { ModuleComponent } from "./module-lazy";
+export { defineModule } from "./defineModule";
+export type {
+  DefineModuleOptions,
+  ModuleService,
+  PageComponent,
+  PageController,
+  PageDefinition,
+  PageVariant,
+  ShellModule,
+  SinglePage,
+  VariantsPage,
+} from "./defineModule";
 
 // ----- Router-связки -----
 

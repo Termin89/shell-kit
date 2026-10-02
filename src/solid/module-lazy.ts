@@ -13,9 +13,10 @@ export type ModuleComponent = Component<Record<string, unknown>> & {
  * - `export { Component }`;
  * - `export { view }`.
  *
- * Для Solid 2: `defineModule` (module-слой) собирает React-компонент —
- * Solid-приложения используют прямые экспорты компонента, поле `view`
- * проверяется для симметрии контрактов.
+ * Для Solid 2 поддерживаются оба контракта: `defineModule` из
+ * `shell-kit/solid` (Solid-редакция — собирает Solid-компонент,
+ * берётся `view`) и прямые экспорты компонента (`default` /
+ * `Component` / `view`).
  */
 function asComponent(value: unknown): Component<Record<string, unknown>> | null {
   return typeof value === "function"

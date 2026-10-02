@@ -98,10 +98,10 @@ export default defineModule({
 ## Solid-адаптер
 
 Тот же контракт ядра под Solid 2 (`solid-js@2.0.0-rc.13`, стабильного
-2.x пока нет — сидим на RC): провайдер, гейт, рендерер, хуки и
-router/queries-связки — одним входом `shell-kit/solid`. Framework-free
-ядра (router, queries, errors, storage) общие с React-версией;
-UI-примитивы в solid-слой не портированы.
+2.x пока нет — сидим на RC): провайдер, гейт, рендерер, хуки,
+router/queries-связки и `defineModule` — одним входом `shell-kit/solid`.
+Framework-free ядра (router, queries, errors, storage) общие
+с React-версией; UI-примитивы в solid-слой не портированы.
 
 ```tsx
 // App.tsx — Solid
@@ -129,9 +129,11 @@ export function App() {
 
 Идиоматика Solid 2: реактивные аргументы — геттерами
 (`useMedia(() => ref)`), возврат — аксессоры (`state().activeModule`),
-props не деструктурируются. Семантика `ModuleRenderer` (loadingDelay,
-pageTransition, retry через пересоздание поддерева) — паритет с
-React-версией. Подробности — `src/solid/readme.md`.
+props не деструктурируются. Контракт модуля — `defineModule`
+из `shell-kit/solid` (семантический паритет с React-версией;
+контроллер — setup-функция вместо хука). Семантика `ModuleRenderer`
+(loadingDelay, pageTransition, retry через пересоздание поддерева) —
+паритет с React-версией. Подробности — `src/solid/readme.md`.
 
 ## Субпути пакета
 
@@ -140,7 +142,7 @@ React-версией. Подробности — `src/solid/readme.md`.
 | `shell-kit` | всё public-API ядра (корневой вход) |
 | `shell-kit/core` | Shell: реестр, видимость, bootstrap, состояние |
 | `shell-kit/react` | ShellProvider, hooks, ModuleRenderer, ShellGate |
-| `shell-kit/solid` | Solid 2-адаптер: провайдер, hooks, ModuleRenderer, router/queries-связки |
+| `shell-kit/solid` | Solid 2-адаптер: провайдер, hooks, ModuleRenderer, defineModule, router/queries-связки |
 | `shell-kit/module` | контракт модуля: `defineModule` |
 | `shell-kit/service` | `defineService`: стратегии api/mock per-call |
 | `shell-kit/transport` | HTTP-транспорт: конверт, TransportError |

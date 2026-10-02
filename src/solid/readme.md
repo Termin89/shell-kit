@@ -81,6 +81,50 @@ render(
   solid-`lazy` кеширует промис внутри себя, одного reset boundary
   недостаточно.
 
+## defineModule — контракт модуля
+
+`shell-kit/solid` экспортирует Solid-редакцию `defineModule`: тот же
+контракт (вьюха/варианты/контроллер/сервис), что и React-версия, но типы
+локальные (`Component` из solid-js, `JSX` из @solidjs/web) — react
+в solid-дист не тянется. module-lazy резолвит `default.view`, рендерер
+не меняется; прямые экспорты компонента тоже поддерживаются.
+
+```tsx
+import { defineModule } from "shell-kit/solid";
+
+export default defineModule({
+  page: {
+    component: OkPage,        // чистая вьюха: только пропсы
+    controller: setupOkProps, // (service: OkService) => OkProps
+  },
+  service: { id: "ok", instance: okService }, // опционально
+});
+```
+
+- **Контроллер — setup-функция** `(service) => props`: вызывается ровно
+  один раз в теле собранной вьюхи (owned scope) — можно звать
+  `useModuleRoute`/`useServiceQuery`, создавать мемо и сигналы. Это
+  аналог хука `useXxxProps` из React-версии; по конвенции имени —
+  `setupXxxProps`. Сервис передаётся аргументом от модуля, не из
+  замыкания; модуль без сервиса объявляет контроллер `() => P`.
+- **Пропсы — аксессоры** (getter-in / accessor-out): реактивные значения
+  контроллер отдаёт функциями, вьюха читает `props.query.loading()`,
+  `props.route.path()`.
+- **Варианты**: резолв — первый подходящий `when(props)`; предикат читает
+  аксессоры, смена условия реактивно пересчитывает вариант (`createMemo`).
+  Рендер — keyed `<Show>` по identity варианта: смена варианта
+  пересоздаёт поддерево, lazy-вариант грузит свой чанк (suspense ловит
+  внешний `<Loading>`/`<Errored>` в ModuleRenderer). Вариант без `when` —
+  дефолт, ставится последним; нет матча — warn + пустой рендер
+  (ошибка конфигурации).
+- **Предупреждение о scope.** `when` — compute: только читает, ничего
+  не пишет. Запись сигналов в теле контроллера (owned/compute scope)
+  запрещена — записи живут в колбэках, `.then`-продолжениях и apply-фазе
+  эффектов.
+
+Живой пример — `src/demo-solid/modules/Ok.tsx` (контроллер-setup +
+чистая вьюха + defineModule-экспорт).
+
 ## Заметки Solid 2
 
 - **Getter-in / accessor-out.** Реактивные аргументы — функциями
