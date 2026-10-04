@@ -115,7 +115,10 @@ u-kon (github.com/Termin89/u-kon), 2026-10-04: guard в
 dev-сервере — 21 маршрут (гость: login/register; админ: feed+editor+
 admin, messenger+чат, requests+wizard+admin, partners+wizard+admin,
 resources+create под партнёром, events/about/tariffs/settings/
-support) + редактор профиля за тогглом «Редактировать» — все видимые
-контролы computed ≥16px, инлайн-размеров в src нет; скрины wizard/
-profile/resource — без разъезда. QA-строка — docs/modules/cross-qa.md
-(X-58).
+support) + редактор профиля за тогглом «Редактировать» и модалки за
+DOM-кликами (RespondModal — деталь входящей «взята в работу» без
+отклика, кнопка requests/detail/respond; DirectRequestModal —
+«Подать заявку» на карточке партнёра) — все видимые контролы,
+включая поля внутри [role=dialog], computed ≥16px, инлайн-размеров
+в src нет; скрины wizard/profile/resource/модалок — без разъезда.
+QA-строка — docs/modules/cross-qa.md (X-58).
