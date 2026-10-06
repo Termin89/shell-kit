@@ -12,5 +12,14 @@ export { defineService } from "./defineService";
 
 export { bindServiceContextSource, getResolveContext } from "./context";
 
-export type { MockStrategyRegistration } from "./registry";
-export { getMockRegistry } from "./registry";
+export type {
+  MockStrategyRegistration,
+  ServiceRegistration,
+  ServiceCatalogEntry,
+} from "./registry";
+export {
+  getMockRegistry,
+  getServiceCatalog,
+  getStrategyOverrides,
+  setServiceStrategyOverride,
+} from "./registry";

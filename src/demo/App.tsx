@@ -1,5 +1,6 @@
 import { Shell, UnauthenticatedError } from "shell-kit/core";
 import type { ModuleConfig } from "shell-kit/core";
+import { defineDev } from "shell-kit/devtools";
 import { authHandler, errorBus, networkHandler, toastHandler } from "shell-kit/errors";
 import {
   ModuleRenderer,
@@ -16,6 +17,13 @@ import "./App.css";
 
 // Модуль E падает при первой загрузке, чтобы показать Retry в Error Boundary
 let moduleEFailed = false;
+
+// Dev-тула стратегий (defineDev, v0.4.0): плавающая кнопка «DEV» →
+// каталог сервисов реестра (сервисы регистрируются лениво — в демо
+// это orders из module-f) + радио mock/api с записью override в LS
+// и перезагрузкой. Монтируется вне ShellGate — работает на любом
+// экране, включая auth-слот.
+const DevTools = defineDev();
 
 // as const выводит литеральные id — из них складывается union ModuleId
 const modules = [
@@ -532,6 +540,7 @@ const AuthScreen = ({ onLogin }: { onLogin: () => void }) => (
 export default function App() {
   return (
     <ShellProvider shell={shell}>
+      <DevTools />
       <ShellGate
         fallback={<BootstrapSplash />}
         error={(error, retry) => (

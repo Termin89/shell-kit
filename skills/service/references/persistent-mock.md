@@ -84,15 +84,43 @@ export interface ServiceStrategy<TService extends object> {
   чтение свойства (не функции) тоже резолвит — обращение к полю
   инстанса идёт через тот же диспетчер.
 
-## Реестр моков (MockPanel, этап D)
+## Реестр сервисов и dev-override (defineDev)
 
-Стратегия с полем `mock: "<ключ>"` при `defineService` попадает в
-реестр (`_registerMockStrategy`, registry.ts; дедуп по паре id).
-`getMockRegistry()` отдаёт снимок `{serviceId, strategyId, flag}` —
-его читает MockPanel этапа D: список сервисов с моками + тумблер,
-пишущий `mockFlags[flag]`; диспетчер подхватывает на следующем
-вызове. Реестр — единственный автоматический побочный эффект
-объявления стратегий.
+`defineService` при описании сервиса кладёт его в реестр целиком
+(`_registerService`, registry.ts: все стратегии в порядке
+приоритета + предикаты `available`; дедуп по serviceId, последний
+побеждает). Поверх — два читателя:
+
+- **`getMockRegistry()`** — узкий срез `{serviceId, strategyId, flag}`
+  только по стратегиям с полем `mock` (тумблеры MockPanel этапа D:
+  панель пишет `mockFlags[flag]`, диспетчер подхватывает на следующем
+  вызове).
+- **`getServiceCatalog()`** — полный каталог для dev-тулы (v0.4.0):
+  `{serviceId, strategies[{id, mock}], activeStrategyId,
+  naturalStrategyId, overrideStrategyId}`. Активная считается общим
+  `resolveWinner` (та же точка правды, что у диспетчера); контекст —
+  `getResolveContext()` в try/catch: не биндился → активной нет.
+
+**Override** — `setServiceStrategyOverride(serviceId, strategyId |
+null)`: Map в памяти, применяется мгновенно (следующий вызов метода
+резолвится с override). Приоритет: override побеждает, если стратегия
+существует и available; иначе честный fallback — первая available.
+
+**defineDev** (subpath `shell-kit/devtools`, тянет React — в корневой
+index не реэкспортится) — тулa стратегий: плавающая кнопка «DEV» →
+панель «API · Сервисы» (радио стратегий, «Применить»/«Сбросить»).
+Применение = LS + перезагрузка: у сервисов есть состояние (LS-моки,
+query-кеш, module-level инстансы api) — чистый старт. Персист —
+`<project>:dev:strategy` (configureStorage; без него — fallback-ключ
+`shell-kit:dev:strategy` + warn), применяется на старте
+`applyDevStrategyOverrides()` до первого обращения к сервисам.
+Ядро DEV не гейтит (`import.meta.env` — не для lib-кода): гейтинг —
+`import.meta.env.DEV && <DevTools/>` в приложении (прод-сборка
+вырезает ветку и dev-чанк целиком). Реестр видит только загруженные
+service-модули → dev-чанк приложения импортирует их статически.
+Вьюха панели заменяемая: `view: (api: DevPanelApi) => ReactNode`
+(каталог, черновик выбора, apply/reset/close) — UI на дизайн-системе
+проекта. Эталон интеграции — u-kon (`src/ui/dev/index.tsx` + App.tsx).
 
 ## PersistentMock: персистентность и пересев
 

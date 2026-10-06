@@ -192,6 +192,15 @@ service.ts (storage.ts — осознанное исключение: он и е
 - Расщепление существующего монолита: см.
   `references/playbook.md` — перенос без изменения логики, barrel,
   правка импортов потребителей, верификация tsc/oxlint/build.
+- Dev-тула стратегий (shell-kit ≥ 0.4.0): `defineDev` (subpath
+  `shell-kit/devtools`) — плавающая кнопка «DEV» → панель «API ·
+  Сервисы»: все сервисы реестра (`getServiceCatalog`), радио
+  mock/api, «Применить» = override в LS (`<project>:dev:strategy`)
+  + reload. Точка монтирования — корень App за `import.meta.env.DEV`
+  (прод-вырезание одной строкой), `applyDevStrategyOverrides()` —
+  module scope до первого обращения к сервисам; dev-чанк статически
+  импортирует service-модули (реестр видит только загруженное).
+  Семантика реестра и override — `references/persistent-mock.md`.
 
 ## 6. Аудит
 
