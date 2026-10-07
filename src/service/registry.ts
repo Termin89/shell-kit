@@ -57,6 +57,11 @@ export interface ServiceRegistration {
 export interface ServiceCatalogEntry {
   readonly serviceId: string;
   /** Стратегии в порядке приоритета объявления. */
+  /**
+   * Доступные при текущем контексте стратегии; недоступные
+   * (available: false — например, api-заглушка до подключения
+   * backend) в каталог не попадают.
+   */
   readonly strategies: ReadonlyArray<{ readonly id: string; readonly mock?: string }>;
   /** Победитель с учётом override (undefined — контекст не биндился). */
   readonly activeStrategyId?: string;
@@ -154,6 +159,11 @@ function readContextSafe(): ResolveContext | undefined {
  * dev-чанк приложения статически импортирует service-модули (прогрев
  * реестра к моменту открытия тулы). Активная стратегия считается общим
  * resolveWinner; без бинда контекста (Shell ещё не создан) активной нет.
+ *
+ * Стратегии фильтруются по available(ctx): недоступные (выключенные
+ * заглушки) в каталог не попадают — тулa предлагает только то, что
+ * реально может выиграть. Без бинда контекста available не вычислить —
+ * каталог показывает все стратегии.
  */
 export function getServiceCatalog(): ReadonlyArray<ServiceCatalogEntry> {
   const ctx = readContextSafe();
@@ -165,9 +175,12 @@ export function getServiceCatalog(): ReadonlyArray<ServiceCatalogEntry> {
     const natural = ctx
       ? resolveWinner(service.strategies, ctx)
       : undefined;
+    const visible = ctx
+      ? service.strategies.filter((s) => s.available(ctx))
+      : service.strategies;
     return {
       serviceId: service.serviceId,
-      strategies: service.strategies.map(({ id, mock }) =>
+      strategies: visible.map(({ id, mock }) =>
         mock === undefined ? { id } : { id, mock },
       ),
       ...(withOverride !== undefined

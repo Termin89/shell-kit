@@ -124,7 +124,11 @@ function ServiceRow({ entry, api }: { entry: ServiceCatalogEntry; api: DevPanelA
       {entry.overrideStrategyId !== undefined && (
         <Chip style={{ fontSize: 10, padding: "1px 8px" }}>override</Chip>
       )}
-      {single !== undefined ? (
+      {entry.strategies.length === 0 ? (
+        <span style={{ ...strategiesStyle, fontSize: 12, color: "#5c6674" }}>
+          — (нет доступных)
+        </span>
+      ) : single !== undefined ? (
         <span style={{ ...strategiesStyle, fontSize: 12, color: "#5c6674" }}>
           {single.id}
         </span>

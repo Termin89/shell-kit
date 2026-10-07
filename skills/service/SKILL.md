@@ -194,7 +194,9 @@ service.ts (storage.ts — осознанное исключение: он и е
   правка импортов потребителей, верификация tsc/oxlint/build.
 - Dev-тула стратегий (shell-kit ≥ 0.4.0): `defineDev` (subpath
   `shell-kit/devtools`) — плавающая кнопка «DEV» → панель «API ·
-  Сервисы»: все сервисы реестра (`getServiceCatalog`), радио
+  Сервисы»: все сервисы реестра (`getServiceCatalog`; доступные
+  стратегии — недоступные, `available: false` (api-заглушки до
+  подключения backend), не показываются, v0.4.1), радио
   mock/api, «Применить» = override в LS (`<project>:dev:strategy`)
   + reload. Точка монтирования — корень App за `import.meta.env.DEV`
   (прод-вырезание одной строкой), `applyDevStrategyOverrides()` —

@@ -1,12 +1,16 @@
 {
   "name": "shell-kit",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Модульный каркас приложений: реестр модулей, сервис-слой (mock/api), transport, query-порт, UI-кит, router-слой и адаптеры React/Solid",
   "license": "MIT",
   "type": "module",
-  "sideEffects": ["**/*.css"],
-  "engines": { "node": ">=20" },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Termin89/shell-kit.git"
@@ -81,7 +85,11 @@
     "./ui/styles.css": "./dist/ui/components.css",
     "./package.json": "./package.json"
   },
-  "files": ["dist", "skills", "README.md"],
+  "files": [
+    "dist",
+    "skills",
+    "README.md"
+  ],
   "peerDependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

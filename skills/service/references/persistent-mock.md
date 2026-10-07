@@ -95,11 +95,13 @@ export interface ServiceStrategy<TService extends object> {
   только по стратегиям с полем `mock` (тумблеры MockPanel этапа D:
   панель пишет `mockFlags[flag]`, диспетчер подхватывает на следующем
   вызове).
-- **`getServiceCatalog()`** — полный каталог для dev-тулы (v0.4.0):
-  `{serviceId, strategies[{id, mock}], activeStrategyId,
-  naturalStrategyId, overrideStrategyId}`. Активная считается общим
-  `resolveWinner` (та же точка правды, что у диспетчера); контекст —
-  `getResolveContext()` в try/catch: не биндился → активной нет.
+- **`getServiceCatalog()`** — каталог для dev-тулы (v0.4.0; с v0.4.1
+  стратегии фильтруются по `available(ctx)` — выключенные заглушки
+  тулa не показывает): `{serviceId, strategies[{id, mock}],
+  activeStrategyId, naturalStrategyId, overrideStrategyId}`.
+  Активная считается общим `resolveWinner` (та же точка правды, что
+  у диспетчера); контекст — `getResolveContext()` в try/catch:
+  не биндился → активной нет, доступны все стратегии.
 
 **Override** — `setServiceStrategyOverride(serviceId, strategyId |
 null)`: Map в памяти, применяется мгновенно (следующий вызов метода
