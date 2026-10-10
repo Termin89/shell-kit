@@ -38,6 +38,8 @@ import type {
   ModuleStateSource,
   RegisteredStatesDeclaration,
 } from "../module/states";
+import { createMemoryHistory, RouterProvider } from "../router";
+import type { RouterPort } from "../router";
 import { Button, Chip } from "../ui";
 import { demoParams, demoPath, rolesUniverse, statePath } from "./preview";
 
@@ -200,10 +202,12 @@ function PreviewStage({
   entry,
   initState,
   rolesRef,
+  port,
 }: {
   readonly entry: RegisteredStatesDeclaration;
   readonly initState: PreviewInitState;
   readonly rolesRef: { current: readonly string[] };
+  readonly port: RouterPort;
 }): ReactNode {
   const declaration = entry.declaration;
   const machine = useModuleStateMachine();
@@ -211,6 +215,14 @@ function PreviewStage({
   const order = useMemo(() => swapOrder(declaration), [declaration]);
   const universe = useMemo(() => rolesUniverse(declaration), [declaration]);
   const Wrap = entry.preview;
+
+  // Навигация из самой вьюхи (useNavigate) пишет в историю превью —
+  // синхронизируем изолированную машину. После goto это no-op
+  // (состояние не меняется — refresh гасит неизменные переходы).
+  useEffect(
+    () => port.subscribe(() => machine.sync()),
+    [port, machine],
+  );
 
   const [selected, setSelected] = useState<{ state: string; variant: string | null }>({
     state: initState.state,
@@ -377,17 +389,27 @@ export function PreviewHost({
   onClose,
 }: PreviewHostProps): ReactNode {
   const declaration = entry.declaration;
-  // Source-стаб в памяти: своё пространство адреса — navigate/replace
-  // пишут в pathRef, реальный роутер не участвует. Засев — demoPath
-  // целевого состояния: первый sync уже резолвит его.
-  const [source] = useState<ModuleStateSource>(() => {
-    const pathRef = { current: demoPath(declaration, initState.state) };
+  // История превью в памяти: своё пространство адреса — реальный
+  // роутер приложения не участвует. Она же — порт RouterProvider
+  // для вьюх с router-хуками (usePath/useNavigate: без провайдера
+  // хуки бросают, ссылки внутри превью остаются в изоляции), и
+  // основа source-стаба машины. Засев — demoPath целевого
+  // состояния: первый sync уже резолвит его.
+  const [{ history, source }] = useState(() => {
+    const memory = createMemoryHistory(demoPath(declaration, initState.state));
     return {
-      getPath: () => pathRef.current,
-      getQuery: () => "",
-      navigate: (path: string) => {
-        pathRef.current = path;
-      },
+      history: memory,
+      source: {
+        getPath: () => memory.path,
+        getQuery: () => "",
+        navigate: (path: string, options?: { readonly replace?: boolean }) => {
+          if (options?.replace === true) {
+            memory.replace(path);
+          } else {
+            memory.push(path);
+          }
+          },
+      } satisfies ModuleStateSource,
     };
   });
   const rolesRef = useRef<readonly string[]>([]);
@@ -431,15 +453,22 @@ export function PreviewHost({
             ✕
           </Button>
         </div>
-        <ModuleStateProvider
-          key={entry.id}
-          declaration={declaration}
-          source={source}
-          getRoles={() => rolesRef.current}
-          skipOnEnter
-        >
-          <PreviewStage entry={entry} initState={initState} rolesRef={rolesRef} />
-        </ModuleStateProvider>
+        <RouterProvider port={history}>
+          <ModuleStateProvider
+            key={entry.id}
+            declaration={declaration}
+            source={source}
+            getRoles={() => rolesRef.current}
+            skipOnEnter
+          >
+            <PreviewStage
+              entry={entry}
+              initState={initState}
+              rolesRef={rolesRef}
+              port={history}
+            />
+          </ModuleStateProvider>
+        </RouterProvider>
       </div>
     </div>,
     document.body,
