@@ -1,7 +1,7 @@
 {
   "name": "shell-kit",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Модульный каркас приложений: реестр модулей, сервис-слой (mock/api), transport, query-порт, UI-кит, router-слой и адаптеры React/Solid",
   "license": "MIT",
   "type": "module",
@@ -50,6 +50,11 @@
       "types": "./dist/module/index.d.ts",
       "import": "./dist/module/index.js"
     },
+    "./module/states": {
+      "types": "./dist/module/states/index.d.ts",
+      "import": "./dist/module/states/index.js"
+    },
+    "./module/states.css": "./dist/module/states/swap.css",
     "./queries": {
       "types": "./dist/queries/index.d.ts",
       "import": "./dist/queries/index.js"

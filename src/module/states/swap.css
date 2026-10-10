@@ -1,0 +1,34 @@
+/*
+ * module/states — стили рамки-свапа состояний (SwapFrame).
+ * Направление задаёт CSS-переменная --swap-dir (её ставит
+ * useSwapAnimation), высоту поверхности при slide анимирует тот же
+ * хук inline-стилями. Класс sk-swap-anim ставится только контенту,
+ * смонтированному свапом, — первичный mount анимацией не
+ * сопровождается. prefers-reduced-motion — мгновенная смена.
+ */
+@keyframes sk-swap-in {
+  from {
+    opacity: 0;
+    translate: calc(var(--swap-dir, 1) * 18px) 0;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.sk-swap-surface > .sk-swap-anim {
+  animation: sk-swap-in 0.32s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+
+.sk-state-fade {
+  animation: sk-swap-in 0.28s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-swap-surface > .sk-swap-anim,
+  .sk-state-fade {
+    animation: none;
+  }
+}

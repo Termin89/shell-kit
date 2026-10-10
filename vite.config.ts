@@ -15,6 +15,7 @@ const layerEntries = {
   "devtools/index": path.resolve(__dirname, "src/devtools/index.ts"),
   "errors/index": path.resolve(__dirname, "src/errors/index.ts"),
   "module/index": path.resolve(__dirname, "src/module/index.ts"),
+  "module/states/index": path.resolve(__dirname, "src/module/states/index.ts"),
   "queries/index": path.resolve(__dirname, "src/queries/index.ts"),
   "react/index": path.resolve(__dirname, "src/react/index.ts"),
   "router/index": path.resolve(__dirname, "src/router/index.ts"),
@@ -89,8 +90,9 @@ const libSolidConfig = {
   emptyOutDir: false,
 };
 
-// Копия CSS-слоя в dist: экспорт shell-kit/ui/styles.css указывает
-// на dist/ui/components.css, исходник живёт рядом с компонентами ядра
+// Копия CSS-слоёв в dist: экспорт shell-kit/ui/styles.css указывает
+// на dist/ui/components.css, shell-kit/module/states.css — на
+// dist/module/states/swap.css; исходники живут рядом с компонентами ядра
 function copyComponentsCss(): Plugin {
   return {
     name: "copy-components-css",
@@ -99,6 +101,13 @@ function copyComponentsCss(): Plugin {
       fs.copyFileSync(
         path.resolve(__dirname, "src/ui/components.css"),
         path.resolve(__dirname, "dist/ui/components.css"),
+      );
+      fs.mkdirSync(path.resolve(__dirname, "dist/module/states"), {
+        recursive: true,
+      });
+      fs.copyFileSync(
+        path.resolve(__dirname, "src/module/states/swap.css"),
+        path.resolve(__dirname, "dist/module/states/swap.css"),
       );
     },
   };
