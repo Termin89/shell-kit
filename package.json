@@ -34,6 +34,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./app": {
+      "types": "./dist/app/index.d.ts",
+      "import": "./dist/app/index.js"
+    },
     "./core": {
       "types": "./dist/core/index.d.ts",
       "import": "./dist/core/index.js"

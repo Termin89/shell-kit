@@ -11,6 +11,7 @@ const __dirname = import.meta.dirname
 // импортируют shell-kit/<layer>.
 const layerEntries = {
   index: path.resolve(__dirname, "src/index.ts"),
+  "app/index": path.resolve(__dirname, "src/app/index.ts"),
   "core/index": path.resolve(__dirname, "src/core/index.ts"),
   "devtools/index": path.resolve(__dirname, "src/devtools/index.ts"),
   "errors/index": path.resolve(__dirname, "src/errors/index.ts"),
