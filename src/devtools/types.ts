@@ -3,6 +3,7 @@
  */
 
 import type { ReactNode } from "react";
+import type { AppHandle } from "../app";
 import type { ServiceCatalogEntry } from "../service";
 
 /**
@@ -19,6 +20,10 @@ export interface DevPanelApi {
   readonly selection: Readonly<Record<string, string>>;
   /** Черновик расходится с активными стратегиями — «Применить» доступна. */
   readonly dirty: boolean;
+  /** Идёт прогрев чанков модулей декларации — каталог может пополняться. */
+  readonly warming: boolean;
+  /** Сколько чанков модулей осталось догрузить (0 — прогрев завершён). */
+  readonly warmLeft: number;
   /** Выбрать стратегию сервиса в черновике. */
   select(serviceId: string, strategyId: string): void;
   /** Записать override в localStorage и перезагрузить страницу. */
@@ -43,4 +48,12 @@ export interface DevToolsConfig {
    * задайте её под высоту навигации на нужных брейкпойнтах.
    */
   className?: string;
+  /**
+   * Инстанс приложения (AppHandle из defineApp): при открытии панели
+   * прогреваются чанки всех модулей декларации — каталог сервисов полон
+   * без статических импортов в чанке тулы. Не задан — берётся из
+   * AppContext (тула внутри app.Root); нет ни того ни другого —
+   * прежнее поведение: реестр видит только загруженные модули.
+   */
+  app?: AppHandle;
 }

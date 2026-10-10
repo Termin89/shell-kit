@@ -1,5 +1,6 @@
 /**
- * Дефолтная вьюха dev-панели: меню с секцией «API · Сервисы».
+ * Дефолтная вьюха dev-панели: табы «API · Сервисы» (каталог
+ * стратегий) и «Состояния» (живые машины модулей — StatesCatalog).
  *
  * Рисуется на примитивах shell-kit/ui (Button/Card/Chip) — работает в
  * любом проекте, импортирующем shell-kit/ui/styles.css; специфичные
@@ -8,9 +9,10 @@
  * Свою вьюху под дизайн-систему подключает view-проп defineDev.
  */
 
-import type { CSSProperties, ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import type { ServiceCatalogEntry } from "../service";
 import { Button, Card, Chip } from "../ui";
+import { StatesCatalog } from "./StatesCatalog";
 import type { DevPanelApi } from "./types";
 
 const FONT =
@@ -53,6 +55,12 @@ const footerStyle: CSSProperties = {
   gap: 8,
   padding: "10px 12px",
   borderTop: "1px solid #e3e7ec",
+};
+
+const tabRowStyle: CSSProperties = {
+  display: "flex",
+  gap: 4,
+  padding: "8px 12px 0",
 };
 
 const serviceNameStyle: CSSProperties = {
@@ -163,6 +171,8 @@ function ServiceRow({ entry, api }: { entry: ServiceCatalogEntry; api: DevPanelA
 
 /** Дефолтная панель: секция «API · Сервисы», применить/сбросить. */
 export function DefaultDevPanel({ api }: { api: DevPanelApi }): ReactNode {
+  const [tab, setTab] = useState<"services" | "states">("services");
+
   return (
     <Card style={panelStyle} role="dialog" aria-label="DEV-инструменты" data-name="dev/panel" id="sk-devtools-panel">
       <div style={headerStyle}>
@@ -172,46 +182,88 @@ export function DefaultDevPanel({ api }: { api: DevPanelApi }): ReactNode {
         </Button>
       </div>
 
-      <div style={sectionTitleStyle}>API · Сервисы</div>
-      <div style={baseUrlStyle}>
-        baseUrl:{" "}
-        {api.baseUrl === undefined
-          ? "— (контекст не биндился)"
-          : api.baseUrl === ""
-            ? "«» — same-origin"
-            : api.baseUrl}
-      </div>
-
-      <div style={listStyle}>
-        {api.catalog.length === 0 ? (
-          <p style={{ padding: "8px 0", margin: 0, color: "#5c6674" }}>
-            Реестр пуст — service-модули ещё не загружены (ленивые чанки).
-          </p>
-        ) : (
-          api.catalog.map((entry) => <ServiceRow key={entry.serviceId} entry={entry} api={api} />)
-        )}
-      </div>
-
-      <div style={footerStyle}>
+      <div style={tabRowStyle} role="tablist" aria-label="Секции тулы">
         <Button
+          variant={tab === "services" ? "soft" : "ghost"}
           size="sm"
-          disabled={!api.dirty}
-          onClick={api.apply}
-          title={api.dirty ? "Записать override и перезагрузить" : "Нет изменений"}
-          data-name="dev/apply"
+          role="tab"
+          aria-selected={tab === "services"}
+          style={{ fontSize: 11, padding: "2px 10px" }}
+          onClick={() => setTab("services")}
+          data-name="dev/tab/services"
         >
-          Применить
+          API · Сервисы
         </Button>
         <Button
-          variant="ghost"
+          variant={tab === "states" ? "soft" : "ghost"}
           size="sm"
-          onClick={api.reset}
-          title="Снять все override и перезагрузить"
-          data-name="dev/reset"
+          role="tab"
+          aria-selected={tab === "states"}
+          style={{ fontSize: 11, padding: "2px 10px" }}
+          onClick={() => setTab("states")}
+          data-name="dev/tab/states"
         >
-          Сбросить
+          Состояния
         </Button>
       </div>
+
+      {api.warming && (
+        <div style={baseUrlStyle}>прогрев модулей… осталось {api.warmLeft}</div>
+      )}
+
+      {tab === "services" ? (
+        <>
+          <div style={sectionTitleStyle}>API · Сервисы</div>
+          <div style={baseUrlStyle}>
+            baseUrl:{" "}
+            {api.baseUrl === undefined
+              ? "— (контекст не биндился)"
+              : api.baseUrl === ""
+                ? "«» — same-origin"
+                : api.baseUrl}
+          </div>
+
+          <div style={listStyle}>
+            {api.catalog.length === 0 ? (
+              <p style={{ padding: "8px 0", margin: 0, color: "#5c6674" }}>
+                Реестр пуст — service-модули ещё не загружены (ленивые чанки).
+              </p>
+            ) : (
+              api.catalog.map((entry) => <ServiceRow key={entry.serviceId} entry={entry} api={api} />)
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={sectionTitleStyle}>Состояния · Машины</div>
+          <div style={listStyle}>
+            <StatesCatalog />
+          </div>
+        </>
+      )}
+
+      {tab === "services" && (
+        <div style={footerStyle}>
+          <Button
+            size="sm"
+            disabled={!api.dirty}
+            onClick={api.apply}
+            title={api.dirty ? "Записать override и перезагрузить" : "Нет изменений"}
+            data-name="dev/apply"
+          >
+            Применить
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={api.reset}
+            title="Снять все override и перезагрузить"
+            data-name="dev/reset"
+          >
+            Сбросить
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

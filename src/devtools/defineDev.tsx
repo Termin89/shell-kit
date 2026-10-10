@@ -2,15 +2,20 @@
  * defineDev — фабрика dev-тулы приложения (аналог defineModule для dev).
  *
  * Возвращает компонент: плавающая кнопка «DEV» (fixed внизу справа,
- * портал в body, z-60) → панель с секцией «API · Сервисы» (z-70 — ниже
- * проектных модалок): список сервисов реестра, радио стратегий,
- * «Применить» (активна при изменениях) и «Сбросить».
+ * портал в body, z-60) → панель (z-70 — ниже проектных модалок):
+ * «API · Сервисы» (список сервисов, радио стратегий, применить/
+ * сбросить) и «Состояния» (каталог живых машин, прыжки, журнал).
+ *
+ * Питается инстансом приложения (defineApp): из AppContext корня
+ * (компонент монтируется внутри app.Root) или явно конфигом app.
+ * Из декларации берётся список модулей — при открытии панели чанки
+ * прогреваются (shell.loadModule): каталог сервисов полон с первого
+ * открытия, статические импорты 13 сервисов в dev-чанке проекта
+ * не нужны. Без инстанса (тула вне defineApp) — прежнее поведение:
+ * реестр видит только загруженные service-модули.
  *
  * Вьюха заменяемая: view-проп получает DevPanelApi (каталог, черновик
- * выбора, apply/reset/close) — UI на дизайн-системе проекта. Данные —
- * getServiceCatalog() реестра service-слоя; тулу видно только
- * загруженные service-модули, поэтому dev-чанк приложения импортирует
- * их статически.
+ * выбора, apply/reset/close) — UI на дизайн-системе проекта.
  *
  * Apply = write в LS + location.reload() (у сервисов есть состояние:
  * LS-моки, query-кеш, module-level инстансы — чистый старт). Ядро DEV
@@ -20,12 +25,14 @@
 
 import {
   useCallback,
+  useContext,
   useEffect,
   useState,
   type ComponentType,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { AppContext } from "../app";
 import { getResolveContext, getServiceCatalog } from "../service";
 import type { ServiceCatalogEntry } from "../service";
 import { Button, cx } from "../ui";
@@ -58,7 +65,8 @@ function buildSelection(
 
 /**
  * Создать dev-тулу. Монтируется на уровне корня приложения (вне
- * гейтов экранов — работает и на auth-экране).
+ * гейтов экранов — работает и на auth-экране); внутри app.Root
+ * инстанс подтягивается из контекста.
  *
  * @example
  * const DevTools = defineDev({ className: "…" });
@@ -66,21 +74,50 @@ function buildSelection(
  * import.meta.env.DEV && <DevTools />
  */
 export function defineDev(config: DevToolsConfig = {}): ComponentType {
-  const { view, className } = config;
+  const { view, className, app: appConfig } = config;
 
   function DevTools(): ReactNode {
+    // Инстанс приложения: контекст корня (обычный случай) либо явная
+    // инъекция конфигом (тула вне app.Root).
+    const appFromContext = useContext(AppContext);
+    const app = appConfig ?? appFromContext;
     const [open, setOpen] = useState(false);
     const [catalog, setCatalog] = useState<ReadonlyArray<ServiceCatalogEntry>>([]);
     const [selection, setSelection] = useState<Record<string, string>>({});
+    // Прогрев чанков модулей: сколько осталось (null — не идёт).
+    const [warmLeft, setWarmLeft] = useState<number | null>(null);
 
-    // Каталог перечитывается при открытии: реестр мог пополниться
-    // ленивыми чанками с прошлого раза.
-    const openPanel = useCallback(() => {
+    // Каталог перечитывается при открытии и по мере прогрева: реестр
+    // наполняется импортами чанков (defineService регистрирует сервисы
+    // на уровне модуля).
+    const refreshCatalog = useCallback(() => {
       const snapshot = getServiceCatalog();
       setCatalog(snapshot);
-      setSelection(buildSelection(snapshot));
-      setOpen(true);
+      // Новые сервисы получают дефолт черновика, черновики поверх не
+      // затираются.
+      setSelection((prev) => ({ ...buildSelection(snapshot), ...prev }));
     }, []);
+
+    const openPanel = useCallback(() => {
+      refreshCatalog();
+      setOpen(true);
+      // Прогрев: тянем чанки всех модулей декларации — сервисы
+      // регистрируются, каталог полон без статических импортов
+      // в dev-чанке. loadModule кеширует — повторные открытия дёшевы.
+      if (app !== null) {
+        const modules = app.definition.modules;
+        setWarmLeft(modules.length);
+        for (const module of modules) {
+          app.shell
+            .loadModule(module.id)
+            .catch(() => undefined) // битый чанк не роняет тулу
+            .finally(() => {
+              refreshCatalog();
+              setWarmLeft((n) => (n === null ? null : Math.max(0, n - 1)));
+            });
+        }
+      }
+    }, [app, refreshCatalog]);
 
     const close = useCallback(() => setOpen(false), []);
 
@@ -131,6 +168,8 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
       baseUrl: readBaseUrl(),
       selection,
       dirty,
+      warming: warmLeft !== null && warmLeft > 0,
+      warmLeft: warmLeft ?? 0,
       select,
       apply,
       reset,
