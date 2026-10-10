@@ -1,6 +1,8 @@
 /**
  * Дефолтная вьюха dev-панели: табы «API · Сервисы» (каталог
- * стратегий) и «Состояния» (живые машины модулей — StatesCatalog).
+ * стратегий), «Состояния» (каталог деклараций с офлайн-превью +
+ * живые машины — StatesCatalog) и «Пользователь» (пресеты офлайн-
+ * сессии — только при api.user).
  *
  * Рисуется на примитивах shell-kit/ui (Button/Card/Chip) — работает в
  * любом проекте, импортирующем shell-kit/ui/styles.css; специфичные
@@ -171,7 +173,7 @@ function ServiceRow({ entry, api }: { entry: ServiceCatalogEntry; api: DevPanelA
 
 /** Дефолтная панель: секция «API · Сервисы», применить/сбросить. */
 export function DefaultDevPanel({ api }: { api: DevPanelApi }): ReactNode {
-  const [tab, setTab] = useState<"services" | "states">("services");
+  const [tab, setTab] = useState<"services" | "states" | "user">("services");
 
   return (
     <Card style={panelStyle} role="dialog" aria-label="DEV-инструменты" data-name="dev/panel" id="sk-devtools-panel">
@@ -205,6 +207,19 @@ export function DefaultDevPanel({ api }: { api: DevPanelApi }): ReactNode {
         >
           Состояния
         </Button>
+        {api.user !== undefined && (
+          <Button
+            variant={tab === "user" ? "soft" : "ghost"}
+            size="sm"
+            role="tab"
+            aria-selected={tab === "user"}
+            style={{ fontSize: 11, padding: "2px 10px" }}
+            onClick={() => setTab("user")}
+            data-name="dev/tab/user"
+          >
+            Пользователь
+          </Button>
+        )}
       </div>
 
       {api.warming && (
@@ -235,9 +250,52 @@ export function DefaultDevPanel({ api }: { api: DevPanelApi }): ReactNode {
         </>
       ) : (
         <>
-          <div style={sectionTitleStyle}>Состояния · Машины</div>
+          <div style={sectionTitleStyle}>Состояния · каталог</div>
           <div style={listStyle}>
             <StatesCatalog />
+          </div>
+        </>
+      )}
+
+      {tab === "user" && api.user !== undefined && (
+        <>
+          <div style={sectionTitleStyle}>Пользователь · офлайн-сессия</div>
+          <div style={listStyle}>
+            <div style={rowStyle} data-name="dev/user/current">
+              <span style={serviceNameStyle}>текущий</span>
+              <span
+                style={{
+                  marginLeft: "auto",
+                  fontSize: 12,
+                  color: "#5c6674",
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                }}
+              >
+                {api.user.currentLabel?.() ?? "—"}
+              </span>
+            </div>
+            {api.user.presets.map((preset) => (
+              <div key={preset.id} style={rowStyle} data-name={`dev/user/${preset.id}`}>
+                <span style={serviceNameStyle}>{preset.title}</span>
+                {preset.subtitle !== undefined && (
+                  <span style={{ fontSize: 11, color: "#5c6674" }}>{preset.subtitle}</span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  style={{ marginLeft: "auto", fontSize: 11, padding: "2px 8px" }}
+                  title="Переключить пользователя и перезагрузить страницу"
+                  onClick={() => api.user?.apply(preset.id)}
+                  data-name={`dev/user/${preset.id}/apply`}
+                >
+                  применить
+                </Button>
+              </div>
+            ))}
+            <p style={{ padding: "8px 0 2px", margin: 0, fontSize: 11, color: "#5c6674" }}>
+              Применение перезагружает страницу (как у стратегий сервисов);
+              сетевых запросов нет — сессия пишется в localStorage.
+            </p>
           </div>
         </>
       )}

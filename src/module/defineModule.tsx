@@ -122,6 +122,7 @@ export function defineModule(
       getRoles: options.getRoles,
       journal: options.journal,
       devId: options.devId,
+      preview: options.preview,
       className: options.className,
       itemClassName: options.itemClassName,
     });

@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 /**
  * states/types — контракт декларации состояний экрана.
@@ -155,6 +155,12 @@ export interface StatesPageOptions<Role extends string = string> {
   readonly journal?: boolean;
   /** Имя машины в dev-реестре (по умолчанию — moduleId). */
   readonly devId?: string;
+  /**
+   * Превью-обёртка для офлайн-превью dev-тулы: тонкий компонент
+   * контекста экрана вокруг вьюхи состояний (пример: vm-контекст
+   * auth-экрана). Не задана — превью рендерит вьюхи как есть.
+   */
+  readonly preview?: ComponentType<{ readonly children: ReactNode }>;
   /** Классы рамки-свапа (переопределение дизайн-слоя проекта). */
   readonly className?: string;
   readonly itemClassName?: string;

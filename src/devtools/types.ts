@@ -32,6 +32,34 @@ export interface DevPanelApi {
   reset(): void;
   /** Закрыть панель. */
   close(): void;
+  /**
+   * Пресеты офлайн-пользователя (плашка «Пользователь»): заданы
+   * конфигом defineDev — кастомные view тоже получают их через api.
+   */
+  readonly user?: DevUserConfig;
+}
+
+/** Пресет офлайн-пользователя: кнопка в плашке «Пользователь». */
+export interface DevUserPreset {
+  readonly id: string;
+  /** Короткое имя кнопки («Админ», «Гость»). */
+  readonly title: string;
+  /** Подпись-уточнение (например, e-mail демо-аккаунта). */
+  readonly subtitle?: string;
+}
+
+/**
+ * Плашка «Пользователь»: пресеты офлайн-сессии для dev-тулы.
+ * shell-kit не знает доменной модели пользователя — проект сам
+ * строит пользователя по пресету (пример: мок-логин в LS + reload,
+ * по паттерну стратегий сервисов) и подписывает текущего.
+ */
+export interface DevUserConfig {
+  readonly presets: readonly DevUserPreset[];
+  /** Подпись текущего пользователя (undefined — «—»). */
+  readonly currentLabel?: () => string | undefined;
+  /** Применить пресет: пишет сессию и перезагружает страницу. */
+  apply(presetId: string): void;
 }
 
 /** Конфиг defineDev. */
@@ -48,6 +76,12 @@ export interface DevToolsConfig {
    * задайте её под высоту навигации на нужных брейкпойнтах.
    */
   className?: string;
+  /**
+   * Пресеты офлайн-пользователя: таб «Пользователь» появляется при
+   * заданном конфиге — проект применяет пресеты сам (мок-сессия в
+   * LS + reload). shell-kit модели пользователя не знает.
+   */
+  readonly user?: DevUserConfig;
   /**
    * Инстанс приложения (AppHandle из defineApp): при открытии панели
    * прогреваются чанки всех модулей декларации — каталог сервисов полон

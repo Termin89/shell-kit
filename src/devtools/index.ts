@@ -15,7 +15,12 @@
 
 export { defineDev } from "./defineDev";
 export { StatesCatalog } from "./StatesCatalog";
-export type { DevPanelApi, DevToolsConfig } from "./types";
+export type {
+  DevPanelApi,
+  DevToolsConfig,
+  DevUserConfig,
+  DevUserPreset,
+} from "./types";
 
 export {
   applyDevStrategyOverrides,

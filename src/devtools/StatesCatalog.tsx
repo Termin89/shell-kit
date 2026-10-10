@@ -1,29 +1,47 @@
 /**
- * StatesCatalog — секция «Состояния» dev-панели: живые машины
- * модулей из dev-реестра (module/states, регистрация по devId при
- * создании — включая standalone-машины вроде auth).
+ * StatesCatalog — секция «Состояния» dev-панели, два раздела:
  *
- * На машину: текущее состояние, стейты декларации (путь / host,
- * варианты, access-проекция по ролям — статическая матрица без
- * перелогина), прыжок goto (адресуемые и внутренние: pending
- * доступен прямо из тулы), журнал переходов с replay
- * (последовательный goto траектории).
+ * - **Каталог** — реестр деклараций (module/states/registry): чанк
+ *   модуля грузится → декларация в реестре. Состояния × варианты ×
+ *   статическая access-матрица (projectAccess, guard — маркером
+ *   «guard?»), главная кнопка «превью» — офлайн-оверлей PreviewHost
+ *   (изолированная машина, URL и состояние приложения не мутируются,
+ *   работает и с экрана входа — ShellGate не нужен).
+ * - **Живые машины** (вторично, помечено «живое») — dev-реестр
+ *   смонтированных машин: goto-прыжки, журнал с replay — обратная
+ *   связь с реальным приложением.
  *
- * Реестр машин не эмитит события (машины монтируются чанками) —
- * панель опрашивает его тиком, пока открыта. Машины незагруженных
- * модулей в реестре нет: прогрев чанков — defineDev (список модулей
- * с кнопкой перехода — секция «Модули» ниже).
+ * Оба реестра не эмитят события (наполняются загрузкой чанков) —
+ * панель опрашивает их тиком, пока открыта. Прогрев чанков —
+ * defineDev (секция «Модули» ниже — чипы реальной навигации).
  */
 
-import { useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { AppContext } from "../app";
-import { getRegisteredStateMachines } from "../module/states";
+import {
+  getRegisteredStateDeclarations,
+  getRegisteredStateMachines,
+  hasRuntimeGuard,
+  projectAccess,
+} from "../module/states";
 import type {
   JournalEntry,
   ModuleStateMachine,
   RegisteredStateMachine,
+  RegisteredStatesDeclaration,
 } from "../module/states";
 import { Button, Chip } from "../ui";
+import { PreviewHost } from "./PreviewHost";
+import type { PreviewInitState } from "./PreviewHost";
+import { demoParams, rolesUniverse } from "./preview";
 
 const headerStyle: CSSProperties = {
   display: "flex",
@@ -78,26 +96,23 @@ const modulesRowStyle: CSSProperties = {
   borderBottom: "1px solid #eef1f5",
 };
 
-/** Плейсхолдер-параметры динамических сегментов пути (:id → demo). */
-function demoParams(
-  path: string | undefined,
-): Readonly<Record<string, string>> | undefined {
-  if (path === undefined) return undefined;
-  const out: Record<string, string> = {};
-  for (const seg of path.split("/")) {
-    if (seg.startsWith(":")) out[seg.slice(1)] = "demo";
-  }
-  return Object.keys(out).length > 0 ? out : undefined;
-}
+const sectionHeadStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "10px 0 2px",
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: "#5c6674",
+};
 
-/** Роли-вселенная машины: объединение access.roles состояний. */
-function rolesUniverse(machine: ModuleStateMachine<string, string, string>): string[] {
-  const roles = new Set<string>();
-  for (const config of Object.values(machine.declaration.states)) {
-    for (const role of config.access?.roles ?? []) roles.add(role);
-  }
-  return [...roles];
-}
+const hintStyle: CSSProperties = {
+  padding: "6px 0",
+  margin: 0,
+  color: "#5c6674",
+};
 
 function formatTime(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour12: false });
@@ -122,10 +137,97 @@ async function replayJournal(
   }
 }
 
+/** Секция каталога: декларация из реестра — состояния и превью. */
+function DeclarationSection({
+  entry,
+  onPreview,
+}: {
+  readonly entry: RegisteredStatesDeclaration;
+  readonly onPreview: (
+    entry: RegisteredStatesDeclaration,
+    initState: PreviewInitState,
+  ) => void;
+}): ReactNode {
+  const declaration = entry.declaration;
+  const roles = useMemo(() => rolesUniverse(declaration), [declaration]);
+  const projectionByRole = useMemo(
+    () =>
+      Object.fromEntries(
+        roles.map((role) => [role, projectAccess(declaration, [role])]),
+      ),
+    [declaration, roles],
+  );
+
+  return (
+    <section style={machineStyle} data-name={`dev/decl/${entry.id}`}>
+      <div style={headerStyle}>
+        {entry.id}
+        <span style={{ marginLeft: "auto", fontWeight: 400 }}>
+          {Object.keys(declaration.states).length} сост.
+        </span>
+      </div>
+
+      {Object.entries(declaration.states).map(([id, config]) => (
+        <div key={id} style={stateRowStyle} data-name={`dev/decl/${entry.id}/${id}`}>
+          <span style={stateNameStyle}>{id}</span>
+          <span style={{ color: "#5c6674" }}>
+            {config.path !== undefined
+              ? config.path
+              : `→ host ${config.host ?? ""}`}
+          </span>
+          {roles.map((role) =>
+            projectionByRole[role][id] ? (
+              <Chip key={role} style={{ fontSize: 10, padding: "1px 7px" }}>
+                {role}
+              </Chip>
+            ) : (
+              <span
+                key={role}
+                style={{ fontSize: 11, color: "#a6aeb9", textDecoration: "line-through" }}
+              >
+                {role}
+              </span>
+            ),
+          )}
+          {hasRuntimeGuard(declaration, id) && (
+            <Chip style={{ fontSize: 10, padding: "1px 7px", color: "#8a6d1a" }}>
+              guard?
+            </Chip>
+          )}
+          {(config.variants ?? []).map((variant) => (
+            <Button
+              key={variant.id}
+              variant="ghost"
+              size="sm"
+              style={{ fontSize: 10, padding: "1px 7px" }}
+              title={`Превью варианта: ${variant.title}`}
+              onClick={() => onPreview(entry, { state: id, variant: variant.id })}
+              data-name={`dev/decl/${entry.id}/${id}/variant/${variant.id}`}
+            >
+              v:{variant.id}
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            style={{ marginLeft: "auto", fontSize: 11, padding: "2px 8px" }}
+            onClick={() => onPreview(entry, { state: id })}
+            title="Офлайн-превью в оверлее: URL и состояние приложения не меняются"
+            data-name={`dev/decl/${entry.id}/${id}/preview`}
+          >
+            превью
+          </Button>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/** Секция живой машины: goto-прыжки, журнал, replay (вторично каталогу). */
 function MachineSection({ entry }: { entry: RegisteredStateMachine }): ReactNode {
   const { machine } = entry;
   const declaration = machine.declaration;
-  const roles = rolesUniverse(machine);
+  const roles = useMemo(() => rolesUniverse(declaration), [declaration]);
   const snapshot = machine.getSnapshot();
   const journal = machine.journalEntries();
 
@@ -224,19 +326,34 @@ function MachineSection({ entry }: { entry: RegisteredStateMachine }): ReactNode
   );
 }
 
-/** Секция «Состояния»: живые машины из dev-реестра. */
+/** Секция «Состояния»: каталог деклараций + живые машины + превью. */
 export function StatesCatalog(): ReactNode {
   const [, setTick] = useState(0);
   // Инстанс приложения (null — тулa вне app.Root: секция модулей
-  // скрыта, показываются только машины dev-реестра).
+  // скрыта, показываются только реестры).
   const app = useContext(AppContext);
+  const [preview, setPreview] = useState<{
+    readonly entry: RegisteredStatesDeclaration;
+    readonly initState: PreviewInitState;
+  } | null>(null);
 
-  // Реестр машин не эмитит события — опрос тиком, пока смонтирован.
+  // Реестры не эмитит события — опрос тиком, пока смонтирован.
   useEffect(() => {
     const timer = setInterval(() => setTick((n) => n + 1), 700);
     return () => clearInterval(timer);
   }, []);
 
+  const openPreview = useCallback(
+    (
+      entry: RegisteredStatesDeclaration,
+      initState: PreviewInitState,
+    ): void => {
+      setPreview({ entry, initState });
+    },
+    [],
+  );
+
+  const declarations = getRegisteredStateDeclarations();
   const machines = getRegisteredStateMachines();
 
   return (
@@ -265,15 +382,42 @@ export function StatesCatalog(): ReactNode {
           })}
         </div>
       )}
+
+      <div style={sectionHeadStyle} data-name="dev/decl">
+        Каталог · декларации
+      </div>
+      {declarations.length === 0 ? (
+        <p style={hintStyle}>
+          Реестр деклараций пуст — states-модули ещё не грузились
+          (панель прогревает их чанки при открытии).
+        </p>
+      ) : (
+        declarations.map((entry) => (
+          <DeclarationSection key={entry.id} entry={entry} onPreview={openPreview} />
+        ))
+      )}
+
+      <div style={sectionHeadStyle} data-name="dev/live">
+        Живые машины
+        <Chip style={{ fontSize: 9, padding: "0 6px" }}>живое</Chip>
+      </div>
       {machines.length === 0 ? (
-        <p style={{ padding: "6px 0", margin: 0, color: "#5c6674" }}>
-          Живых машин нет — states-модули не смонтированы (auth-машина
-          появляется на экране входа).
+        <p style={hintStyle}>
+          Живых машин нет — экраны states-модулей не смонтированы.
         </p>
       ) : (
         machines.map((entry) => (
           <MachineSection key={entry.id} entry={entry} />
         ))
+      )}
+
+      {preview !== null && (
+        <PreviewHost
+          key={`${preview.entry.id}:${preview.initState.state}:${preview.initState.variant ?? ""}`}
+          entry={preview.entry}
+          initState={preview.initState}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   );

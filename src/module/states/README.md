@@ -72,6 +72,10 @@ const PARTNERS_STATES: StatesDeclaration<
 - Запрет доступа: deep-link в закрытое состояние → replace на путь
   `fallback` (один шаг; без fallback — остаёмся, вьюха показывает
   denied-заглушку).
+- `skipOnEnter` (опция машины/провайдера, v0.9.0) — превью-режим
+  dev-тулы: снапшот/переходы работают, onEnter не вызывается —
+  листание состояний в офлайн-оверлее не запускает эффекты входа
+  живого приложения.
 
 ## Валидация
 
@@ -128,6 +132,39 @@ function AuthGate() {
 читает сессию снаружи, машина не знает домена). `devId` регистрирует
 машину в лёгком dev-реестре — каталог состояний dev-тулы находит её
 по имени, включая standalone (auth).
+
+## Реестр деклараций и офлайн-превью (v0.9.0)
+
+Реестр живых машин видит только смонтированные экраны. Второй реестр —
+**деклараций**: `createStatesPage` регистрирует декларацию по `moduleId`
+на загрузке чанка модуля (dedup/замена по id — HMR), standalone-машины
+регистрируются явно (`registerStatesDeclaration("auth", AUTH_STATES,
+{ preview: AuthPreviewWrap })` из dev-файла проекта). Без dev-гейта —
+цена прод-сборки Map-запись на живые объекты.
+
+```ts
+import {
+  getRegisteredStateDeclarations,
+  projectAccess,
+  hasRuntimeGuard,
+} from "shell-kit/module/states";
+
+const declarations = getRegisteredStateDeclarations();
+// Статическая матрица доступа без машины: roles vs access.roles,
+// «any» и отсутствие ограничения — всем; guard — маркером:
+projectAccess(declaration, ["admin"]); // { list: true, new: false, … }
+hasRuntimeGuard(declaration, "detail"); // true → «guard?» в тулaх
+```
+
+По записи реестра dev-тула строит **офлайн-превью**: оверлей с
+изолированной машиной на source-стабе в памяти (реальный URL и
+состояние приложения не мутируются), `skipOnEnter`, роли — чипами
+через `getRoles`-ref, вьюхи — через `preview`-обёртку записи
+(контекст экрана: vm-контроллер auth). `preview` задаётся опцией
+`createStatesPage`/`defineModule({ states })` или явной регистрацией.
+
+`swapOrder(declaration)` — порядок состояний по `order` (направленный
+слап): используется страницей модуля и превью тулы.
 
 ## Границы
 

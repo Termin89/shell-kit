@@ -14,7 +14,10 @@ export { useModuleState, useModuleStateMachine, useModuleRouteSource, useRouterS
 export { SwapFrame } from "./SwapFrame";
 export type { SwapFrameProps } from "./SwapFrame";
 export { useSwapAnimation } from "./swapAnimation";
-export { createStatesPage } from "./page";
+export { createStatesPage, swapOrder } from "./page";
+export { registerStatesDeclaration, getRegisteredStateDeclarations } from "./registry";
+export type { RegisteredStatesDeclaration, RegisterStatesOptions } from "./registry";
+export { projectAccess, hasRuntimeGuard } from "./access";
 export { validateStates, logStatesIssues } from "./validate";
 export type { StatesIssue, StatesIssueCode } from "./validate";
 export type {

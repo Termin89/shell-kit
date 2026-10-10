@@ -1,7 +1,7 @@
 # shell-core — карта фреймворка (для Miro)
 
 Дата: 2026-10-01, дополнено 2026-10-10 (слои module/states, app,
-devtools). Источники: README.md, VALUE.md, PLAN.md, ISSUES.md,
+devtools; v0.9.0 — реестр деклараций, офлайн-превью, плашка пользователя). Источники: README.md, VALUE.md, PLAN.md, ISSUES.md,
 `src/*` (index-файлы слоёв). Назначение: база для карты в Miro —
 позиционирование, способности слоёв, чего нет и куда развивать.
 
@@ -56,7 +56,7 @@ HTML-прототип / ТЗ
 |---|---|---|---|
 | `core` | Headless-ядро Shell: реестр модулей, видимость, bootstrap, состояние | `Shell`, `AppState`, `ModuleConfig`, `ShellStatus` | — (zero-deps) |
 | `module` | Контракт модуля | `defineModule` (component/variants + controller; с v0.6.0 — опция `states`: декларативная стейт-машина экрана) | core (типы) |
-| `module/states` | Стейт-машина модуля (v0.5.0+): декларация states (path/host, view, variants, access, order, onEnter), goto/send, инвариант внутренних состояний (виден ⟺ URL === host.path), матчинг хвостов через matchPath, журнал-кольцо, access-проекция по ролям, SwapFrame (высотный FLIP) | `createModuleStateMachine`, `ModuleStateProvider`, `useModuleState`, `createStatesPage`, `useSwapAnimation`, `validateStates` | core, router (matchPath), react |
+| `module/states` | Стейт-машина модуля (v0.5.0+): декларация states (path/host, view, variants, access, order, onEnter), goto/send, инвариант внутренних состояний (виден ⟺ URL === host.path), матчинг хвостов через matchPath, журнал-кольцо, access-проекция по ролям, SwapFrame (высотный FLIP); v0.9.0 — реестр деклараций (офлайн-каталог без живой машины), чистая `projectAccess` + `hasRuntimeGuard`, `skipOnEnter` (превью без onEnter) | `createModuleStateMachine`, `ModuleStateProvider`, `useModuleState`, `createStatesPage`, `registerStatesDeclaration`, `projectAccess`, `useSwapAnimation`, `validateStates` | core, router (matchPath), react |
 | `app` | Фабрика приложения (v0.7.0): defineApp — декларация (модули + проектная мета, services, router, errors, auth-экран/сплэш/onSuccess, dev-гейт, именованные слоты toast/layout) с запечённым каноническим порядком сборки (storage → dev → Shell → router → errors → bootstrap); Root + AppContext (не сервис-локатор: инстанс видят каркас и dev-тулы, не модули) | `defineApp`, `useApp`, `AppContext` | core, react, router, storage |
 | `react` | React-тулкит: провайдер, гейт, рендерер, хуки | `ShellProvider`, `ShellGate`, `ModuleRenderer`, `useShell*`, `useActiveModules`, `useMedia` | core, storage |
 | `solid` | Solid 2-адаптер (зеркалит react, идномы Solid 2: getter-аргументы, аксессоры) | те же + `defineModule` (контроллер-setup, локальные типы) + router/queries-связки (`RouterProvider`, `usePath`, `useServiceQuery`) | core, router, queries, storage |
@@ -67,7 +67,7 @@ HTML-прототип / ТЗ
 | `queries` | Query/mutation-слой: кеш, дедуп, инвалидация | `useServiceQuery`, `useServiceMutation`, `QueryPort`, `SelfRolledAdapter` | react |
 | `storage` | Локальная персистентность: данные + медиа | `configureStorage`, `dataCollection`, `putMedia`/`seedMedia`, `resolveMediaUrl`, `clearStorage`, `PersistentMock` | — (browser API) |
 | `ui` | Универсальные UI-примитивы на структурных классах | `cx`, `createIcon`, `Button/Card/Chip/…`, `components.css` | — (токены даёт проект) |
-| `devtools` | Dev-панель (v0.8.0 — на инстансе приложения): таб «API · Сервисы» (каталог стратегий, override через LS + reload) и «Состояния» (живые машины: goto-прыжки, журнал с replay, access-проекции, чипы модулей); прогрев чанков модулей декларации при открытии | `defineDev`, `StatesCatalog`, `applyDevStrategyOverrides` | app (контекст), service, module/states (реестр машин), ui |
+| `devtools` | Dev-панель (v0.9.0): таб «API · Сервисы» (каталог стратегий, override через LS + reload), «Состояния» (каталог деклараций: состояния × варианты × access-матрица + офлайн-превью PreviewHost — изолированная машина в оверлее, без мутации URL/состояния приложения, работает с экрана входа; живые машины вторично: goto, журнал с replay) и «Пользователь» (пресеты офлайн-сессии: apply через reload, домен пользователя — в проекте); прогрев чанков модулей при открытии | `defineDev`, `StatesCatalog`, `PreviewHost`, `applyDevStrategyOverrides` | app (контекст), service, module/states (реестры машин и деклараций), ui |
 | learning: `demo` | Эталон — онбординг людей и few-shot для LLM; dogfood публичного API (импортирует пакет по имени) | демо-модуль на полном стеке | все слои |
 | learning: `demo-solid` | Компактный эталон Solid-адаптера: lazy/retry/loadingDelay, URL-петля, useServiceQuery | модули ok/broken/slow (ok — витрина defineModule: контроллер-setup + чистая вьюха) | все слои (через `solid`) |
 
@@ -219,6 +219,7 @@ mock-флаг = id сервиса; JSDoc с примерами; в проект�
 | Стейт-машина модуля: `module/states` + `defineModule.states` (v0.5.0–v0.6.0; потребители — auth, partners в u-kon) | ✅ |
 | defineApp: декларация + Root + AppContext (v0.7.0; u-kon переведён, App.tsx и второй реестр снесены) | ✅ |
 | Dev-панель на инстансе: прогрев модулей, каталог состояний машин (v0.8.0) | ✅ |
+| Офлайн-превью состояний: реестр деклараций + оверлей на изолированной машине + плашка пользователя (v0.9.0) | ✅ |
 | Solid 2-адаптер (`shell-kit/solid`, optional peers, вторая lib-сборка) | ✅ |
 | URL: синхронизация activeModule ↔ адрес (слой router, вкл/выкл из конфига) | ✅ |
 | Обучающий контур: demo + practice | ✅ (сверх плана) |

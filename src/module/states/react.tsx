@@ -22,6 +22,8 @@ export interface ModuleStateProviderProps<
   readonly journal?: boolean;
   /** Имя машины в dev-реестре (каталог состояний тулы). */
   readonly devId?: string;
+  /** Превью-режим (dev-тула): onEnter состояний не вызывается. */
+  readonly skipOnEnter?: boolean;
   readonly children: ReactNode;
 }
 
@@ -48,6 +50,7 @@ export function ModuleStateProvider<
       getRoles: props.getRoles,
       journal: props.journal,
       devId: props.devId,
+      skipOnEnter: props.skipOnEnter,
     });
   }
   const machine = machineRef.current;

@@ -74,7 +74,7 @@ function buildSelection(
  * import.meta.env.DEV && <DevTools />
  */
 export function defineDev(config: DevToolsConfig = {}): ComponentType {
-  const { view, className, app: appConfig } = config;
+  const { view, className, app: appConfig, user } = config;
 
   function DevTools(): ReactNode {
     // Инстанс приложения: контекст корня (обычный случай) либо явная
@@ -174,6 +174,7 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
       apply,
       reset,
       close,
+      ...(user !== undefined ? { user } : {}),
     };
 
     return createPortal(

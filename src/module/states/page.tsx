@@ -1,6 +1,8 @@
+// oxlint-disable react/only-export-components
 import type { ComponentType, ReactNode } from "react";
 import { useModuleState } from "./hooks";
 import { useModuleRouteSource } from "./hooks";
+import { registerStatesDeclaration } from "./registry";
 import { ModuleStateProvider } from "./react";
 import { SwapFrame } from "./SwapFrame";
 import type {
@@ -17,7 +19,7 @@ import type {
  */
 
 /** Порядок состояний для направленного свапа: order по возрастанию. */
-function swapOrder(declaration: StatesDeclaration<string, string, string>): string[] {
+export function swapOrder(declaration: StatesDeclaration<string, string, string>): string[] {
   return Object.entries(declaration.states)
     .filter(([, config]) => typeof config.order === "number")
     .sort(([, a], [, b]) => (a.order ?? 0) - (b.order ?? 0))
@@ -87,6 +89,13 @@ export function createStatesPage<
   const order = swapOrder(decl);
   const transition = declaration.transition ?? "fade";
   const devId = options.devId ?? moduleId;
+
+  // Реестр деклараций (офлайн-каталог dev-тулы): чанк модуля грузится —
+  // декларация уже в реестре, превью состояний доступно и без живой
+  // машины. Без dev-гейта: цена прода — Map-запись на живые объекты.
+  registerStatesDeclaration(moduleId, declaration, {
+    preview: options.preview,
+  });
 
   function StatesPage(): ReactNode {
     const source = useModuleRouteSource(moduleId);

@@ -1,3 +1,4 @@
+import { projectAccess } from "./access";
 import { matchPath } from "../../router/port";
 import type { GotoOptions, StateAccess, StatesDeclaration } from "./types";
 import { logStatesIssues, validateStates } from "./validate";
@@ -68,6 +69,13 @@ export interface ModuleStateMachineOptions<Role extends string = string> {
    * по нему (регистрируются и standalone-машины — например, auth).
    */
   readonly devId?: string;
+  /**
+   * Превью-режим (dev-тула): onEnter состояний не вызывается —
+   * листание экранов в офлайн-оверлее не запускает эффекты входа
+   * живого приложения (канонизация адреса, авто-прогоны токенов).
+   * Снапшот/журнал/переходы работают как обычно.
+   */
+  readonly skipOnEnter?: boolean;
 }
 
 export interface ModuleStateMachine<
@@ -324,7 +332,10 @@ export function createModuleStateMachine<
     if (enteredId !== id) {
       enteredId = id;
       runCleanup();
-      const onEnter = states[id]?.onEnter;
+      // Превью-режим (dev-тула): onEnter не вызывается — листание
+      // состояний в оверлее не трогает логику живого приложения.
+      const onEnter =
+        options.skipOnEnter === true ? undefined : states[id]?.onEnter;
       if (onEnter !== undefined) {
         const cleanup = onEnter({
           path: source.getPath(),
@@ -514,17 +525,7 @@ export function createModuleStateMachine<
     },
     buildPath: (id, params) => buildPathRaw(id as string, params ?? {}),
     checkAccess: (id, params) => checkAccessRaw(id as string, params ?? {}),
-    accessProjection: (roles) => {
-      const projection = {} as Record<Id, boolean>;
-      for (const id of Object.keys(states)) {
-        const access = states[id].access;
-        projection[id as Id] =
-          access?.roles === undefined ||
-          access.roles === "any" ||
-          access.roles.some((role) => roles.includes(role));
-      }
-      return projection;
-    },
+    accessProjection: (roles) => projectAccess(decl, roles) as Record<Id, boolean>,
     journalEntries: () => journal.slice() as JournalEntry<Id>[],
     dispose: () => {
       if (disposed) {
