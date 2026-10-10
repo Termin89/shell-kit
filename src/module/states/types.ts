@@ -143,3 +143,19 @@ export interface StatesDeclaration<
   /** Глобальные сигналы — fallback для любого состояния. */
   readonly signals?: Readonly<Partial<Record<Signal, Id>>>;
 }
+
+/**
+ * Опции сборки страницы состояний (createStatesPage / ветка states
+ * в defineModule): инъекции машины и классы рамки-свапа.
+ */
+export interface StatesPageOptions<Role extends string = string> {
+  /** Инъекция ролей для access-проверок машины. */
+  readonly getRoles?: () => readonly Role[];
+  /** Журнал переходов для dev-тулы. */
+  readonly journal?: boolean;
+  /** Имя машины в dev-реестре (по умолчанию — moduleId). */
+  readonly devId?: string;
+  /** Классы рамки-свапа (переопределение дизайн-слоя проекта). */
+  readonly className?: string;
+  readonly itemClassName?: string;
+}

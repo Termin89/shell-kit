@@ -15,7 +15,9 @@ import { logStatesIssues, validateStates } from "./validate";
  *   «/:id» — служебный хвост не становится id).
  * - **Внутреннее** (`host`) живёт в слоте памяти и видно ⟺ текущий
  *   адрес — это host.path. Любая внешняя смена адреса сбрасывает
- *   слот (browser-back из внутреннего состояния выходит на host).
+ *   слот (browser-back из внутреннего состояния выходит на host);
+ *   явный goto в адресуемое — тоже (goto(host) из внутреннего
+ *   состояния показывает host-экран, а не возвращается в слот).
  * - **reload → host**: внутренние состояния не персистятся, после
  *   перезагрузки показывается host-состояние по адресу.
  * - **onEnter** вызывает машина при фактическом переходе — не
@@ -428,10 +430,20 @@ export function createModuleStateMachine<
     }
 
     if (config.path !== undefined) {
-      source.navigate(
-        buildPathRaw(id, gotoOptions?.params ?? {}),
-        gotoOptions?.replace === true ? { replace: true } : undefined,
-      );
+      // Явный переход в адресуемое гасит слот внутреннего — иначе
+      // goto(host) из внутреннего состояния вернулся бы в слот по
+      // инварианту («URL === host.path» уже выполнен).
+      memoryState = null;
+      const target = buildPathRaw(id, gotoOptions?.params ?? {});
+      // Адрес уже текущий — без записи истории: повторный goto (или
+      // goto host'а из внутреннего на его же пути) не плодит дубль
+      // в back-стеке.
+      if (target !== source.getPath()) {
+        source.navigate(
+          target,
+          gotoOptions?.replace === true ? { replace: true } : undefined,
+        );
+      }
       // Источник обновляется синхронно (push/replace порт-адаптера
       // уведомляют сразу) — подтверждаем снапшот тем же источником журнала.
       refresh(journalSource);

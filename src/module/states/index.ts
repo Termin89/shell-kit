@@ -15,7 +15,6 @@ export { SwapFrame } from "./SwapFrame";
 export type { SwapFrameProps } from "./SwapFrame";
 export { useSwapAnimation } from "./swapAnimation";
 export { createStatesPage } from "./page";
-export type { StatesPageOptions } from "./page";
 export { validateStates, logStatesIssues } from "./validate";
 export type { StatesIssue, StatesIssueCode } from "./validate";
 export type {
@@ -27,5 +26,6 @@ export type {
   StateConfig,
   StateVariant,
   StatesDeclaration,
+  StatesPageOptions,
   ViewProps,
 } from "./types";

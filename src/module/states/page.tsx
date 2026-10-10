@@ -5,6 +5,7 @@ import { ModuleStateProvider } from "./react";
 import { SwapFrame } from "./SwapFrame";
 import type {
   StatesDeclaration,
+  StatesPageOptions,
   ViewProps,
 } from "./types";
 
@@ -14,18 +15,6 @@ import type {
  * Используется defineModule (ветка states) и пригодится напрямую,
  * если моду нужна своя обёртка над страницей.
  */
-
-export interface StatesPageOptions<Role extends string = string> {
-  /** Инъекция ролей для access-проверок машины. */
-  readonly getRoles?: () => readonly Role[];
-  /** Журнал переходов для dev-тулы. */
-  readonly journal?: boolean;
-  /** Имя машины в dev-реестре (по умолчанию — moduleId). */
-  readonly devId?: string;
-  /** Классы рамки-свапа (переопределение дизайн-слоя проекта). */
-  readonly className?: string;
-  readonly itemClassName?: string;
-}
 
 /** Порядок состояний для направленного свапа: order по возрастанию. */
 function swapOrder(declaration: StatesDeclaration<string, string, string>): string[] {

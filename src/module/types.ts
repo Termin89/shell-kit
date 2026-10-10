@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { StatesDeclaration, StatesPageOptions } from "./states/types";
 
 /**
  * Чистая вьюха страницы: только презентация на семантических токенах
@@ -68,6 +69,33 @@ export interface ModuleService<S = unknown> {
   readonly id: string;
   /** Сам сервис — его модуль передаёт контроллеру страницы. */
   readonly instance: S;
+}
+
+/**
+ * Модуль-карта состояний: экран из нескольких состояний с адресацией
+ * (ветка `states` в defineModule — вместо `page`). Машина состояний
+ * (`module/states`) резолвит активное состояние по модульному хвосту,
+ * вьюхи состояний собирают свои vm сами (слайсы контроллеров).
+ *
+ * `id` модуля обязателен: источник адреса машины — модульный хвост
+ * `useModuleRoute(id)`, он же — дефолтное имя машины в dev-реестре.
+ * `service` здесь — только регистрация для инфраструктуры
+ * (mock-service, логи): вьюхи состояний импортируют сервис напрямую,
+ * единого контроллера у карты нет.
+ */
+export interface DefineModuleStatesOptions<
+  Id extends string = string,
+  Role extends string = string,
+  Signal extends string = string,
+> extends StatesPageOptions<Role> {
+  /** id модуля: модульный хвост машины + имя в dev-реестре. */
+  readonly id: string;
+  /** Декларация карты состояний — что резолвится и чем рендерится. */
+  readonly states: StatesDeclaration<Id, Role, Signal>;
+  /** Ветка page запрещена (типами и рантайм-поясом defineModule). */
+  readonly page?: never;
+  /** Регистрация сервиса модуля — инфраструктуре, не контроллеру. */
+  readonly service?: ModuleService;
 }
 
 /**

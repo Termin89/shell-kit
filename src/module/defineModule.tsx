@@ -1,5 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
+import { createStatesPage } from "./states/page";
 import type {
+  DefineModuleStatesOptions,
   ModuleService,
   PageComponent,
   PageDefinition,
@@ -9,6 +11,8 @@ import type {
 
 export interface DefineModuleOptions<P extends object, S = undefined> {
   page: PageDefinition<P, S>;
+  /** Ветка states запрещена — экран либо страница, либо карта состояний. */
+  states?: never;
   /**
    * Сервис модуля: id + сам сервис (диспетчер defineService). Instance
    * передаётся контроллеру страницы аргументом; типы сверяют связку
@@ -81,11 +85,49 @@ function renderPage<P extends object>(
  *     ],
  *   },
  * });
+ *
+ * // Модуль-карта состояний (states вместо page): машина состояний
+ * // резолвит хвост модуля, у каждого состояния своя вьюха
+ * export default defineModule({
+ *   id: "partners",
+ *   states: PARTNERS_STATES,
+ *   service: { id: "organizations", instance: organizationsService },
+ *   getRoles: () => [user.role],
+ * });
  * ```
  */
 export function defineModule<P extends object, S = undefined>(
   options: DefineModuleOptions<P, S>,
-): ShellModule<P> {
+): ShellModule<P>;
+export function defineModule<
+  Id extends string = string,
+  Role extends string = string,
+  Signal extends string = string,
+>(
+  options: DefineModuleStatesOptions<Id, Role, Signal>,
+): ShellModule;
+export function defineModule(
+  options:
+    | DefineModuleOptions<object, unknown>
+    | DefineModuleStatesOptions,
+): ShellModule {
+  // Ветка states: экран из карты состояний — createStatesPage собирает
+  // провайдер машины + рамку-свап + резолв вьюхи состояния.
+  if (options.states !== undefined) {
+    if (options.page !== undefined) {
+      // Пояс к типам: page и states взаимоисключительны.
+      console.error("[defineModule] page и states взаимоисключительны — укажите что-то одно");
+    }
+    const view = createStatesPage(options.id, options.states, {
+      getRoles: options.getRoles,
+      journal: options.journal,
+      devId: options.devId,
+      className: options.className,
+      itemClassName: options.itemClassName,
+    });
+    return { view, service: options.service };
+  }
+
   const { component, controller, variants } = options.page;
   const service = options.service?.instance;
 
@@ -93,10 +135,10 @@ export function defineModule<P extends object, S = undefined>(
   // быть условным ни статически, ни в рантайме.
   const view: ComponentType = controller
     ? function ModuleView() {
-        return renderPage(component, variants, controller(service as S));
+        return renderPage(component, variants, controller(service));
       }
     : function ModuleView() {
-        return renderPage(component, variants, EMPTY_PROPS as P);
+        return renderPage(component, variants, EMPTY_PROPS as object);
       };
 
   return { view, component, service: options.service };
