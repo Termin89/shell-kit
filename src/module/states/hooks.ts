@@ -60,11 +60,16 @@ export function useModuleRouteSource(moduleId: string): ModuleStateSource {
   latest.current = route;
   // Стабильная обёртка: машина захватывает source один раз при
   // создании — замыкание читает актуальный маршрут через ref.
+  // Пространство машины унифицировано: корень — всегда «/». Хвост
+  // модуля «» маппится в «/» (иначе goto корня из корня считал бы
+  // пути разными и плодил записи истории), «/» машины — в хвост «»
+  // (иначе конкатенация с базой давала бы «/<module>/»).
   return useMemo<ModuleStateSource>(
     () => ({
-      getPath: () => latest.current.path,
+      getPath: () => (latest.current.path === "" ? "/" : latest.current.path),
       getQuery: () => window.location.search,
-      navigate: (path, options) => latest.current.navigate(path, options),
+      navigate: (path, options) =>
+        latest.current.navigate(path === "/" ? "" : path, options),
     }),
     [],
   );
