@@ -4,14 +4,22 @@
  * живые машины — StatesCatalog) и «Пользователь» (пресеты офлайн-
  * сессии — только при api.user).
  *
+ * Панель — немодальный drawer слева на всю высоту окна (~¼ ширины,
+ * clamp(300px, 25vw, 480px)): без бекдропа — приложение видно и
+ * кликабельно, dev следит за живым приложением; overlay, а не push —
+ * layout тестируемого приложения не сдвигается. Скроллится только
+ * контент (шапка и табы вне скролла). Анимация — только transform
+ * (260 мс, вход и выход); prefers-reduced-motion — мгновенно.
+ *
  * Рисуется на примитивах shell-kit/ui (Button/Card/Chip) — работает в
  * любом проекте, импортирующем shell-kit/ui/styles.css; специфичные
  * для тулы стили (fixed-позиционирование, z-слои) — инлайн: слой ниже
- * модалок проекта (fab z-60, панель z-70 — проектные оверлеи выше).
- * Свою вьюху под дизайн-систему подключает view-проп defineDev.
+ * модалок проекта (fab z-60, панель z-70, превью z-80 — проектные
+ * оверлеи выше). Свою вьюху под дизайн-систему подключает view-проп
+ * defineDev — она рендерится без drawer-хрома этой панели.
  */
 
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { ServiceCatalogEntry } from "../service";
 import { Button, Card, Chip } from "../ui";
 import { StatesCatalog } from "./StatesCatalog";
@@ -20,19 +28,31 @@ import type { DevPanelApi } from "./types";
 const FONT =
   'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
+/** Панель ездит только по transform — layout и paint не трогаем. */
+const SLIDE_TRANSITION = "transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+
 const panelStyle: CSSProperties = {
   position: "fixed",
-  right: "16px",
-  bottom: "calc(var(--sk-devtools-bottom, 1.5rem) + 3.25rem)",
+  left: 0,
+  top: 0,
+  bottom: 0,
   zIndex: 70,
-  width: "min(340px, calc(100vw - 32px))",
-  maxHeight: "min(72dvh, 620px)",
+  width: "clamp(300px, 25vw, 480px)",
+  maxWidth: "calc(100vw - 16px)",
   display: "flex",
   flexDirection: "column",
   fontFamily: FONT,
   fontSize: 13,
   lineHeight: 1.45,
   color: "#1c2430",
+  // Card даёт скругление и рамку со всех сторон — drawer притерт
+  // к левому краю: скругление сносим, отделяемся от приложения
+  // правой рамкой и тенью.
+  borderRadius: 0,
+  border: "none",
+  borderRight: "1px solid #e3e7ec",
+  boxShadow: "0 0 24px rgba(16, 33, 60, 0.16), 0 0 2px rgba(16, 33, 60, 0.1)",
+  overflow: "hidden",
 };
 
 const headerStyle: CSSProperties = {
@@ -172,11 +192,55 @@ function ServiceRow({ entry, api }: { entry: ServiceCatalogEntry; api: DevPanelA
 }
 
 /** Дефолтная панель: секция «API · Сервисы», применить/сбросить. */
-export function DefaultDevPanel({ api }: { api: DevPanelApi }): ReactNode {
+export function DefaultDevPanel({
+  api,
+  closing = false,
+}: {
+  api: DevPanelApi;
+  /** Фаза выхода (defineDev): панель уезжает влево перед размонтированием. */
+  closing?: boolean;
+}): ReactNode {
   const [tab, setTab] = useState<"services" | "states" | "user">("services");
+  // reduced-motion фиксируем на маунте: вход и выход — без сдвига
+  // и transition, мгновенно.
+  const [reduced] = useState(
+    () =>
+      typeof window === "undefined" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  const [entered, setEntered] = useState(reduced);
+
+  // Вход: первый кадр — за левым краем, затем none (transition уже
+  // включён). Двойной rAF — гарантия, что стартовый кадр закоммичен.
+  useEffect(() => {
+    if (entered) {
+      return undefined;
+    }
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setEntered(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [entered]);
+
+  const slide: CSSProperties = reduced
+    ? {}
+    : {
+        transform: entered && !closing ? "none" : "translateX(-100%)",
+        transition: SLIDE_TRANSITION,
+      };
 
   return (
-    <Card style={panelStyle} role="dialog" aria-label="DEV-инструменты" data-name="dev/panel" id="sk-devtools-panel">
+    <Card
+      style={{ ...panelStyle, ...slide }}
+      role="dialog"
+      aria-label="DEV-инструменты"
+      data-name="dev/panel"
+      id="sk-devtools-panel"
+    >
       <div style={headerStyle}>
         <strong>DEV · инструменты</strong>
         <Button variant="ghost" size="sm" onClick={api.close} aria-label="Закрыть" data-name="dev/close">

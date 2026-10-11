@@ -2,9 +2,18 @@
  * defineDev — фабрика dev-тулы приложения (аналог defineModule для dev).
  *
  * Возвращает компонент: плавающая кнопка «DEV» (fixed внизу справа,
- * портал в body, z-60) → панель (z-70 — ниже проектных модалок):
- * «API · Сервисы» (список сервисов, радио стратегий, применить/
- * сбросить) и «Состояния» (каталог живых машин, прыжки, журнал).
+ * портал в body, z-60) → панель-drawer слева на всю высоту окна
+ * (z-70 — ниже проектных модалок): немодальная — без бекдропа,
+ * приложение остаётся видимым и кликабельным; закрытие — Esc / ✕ /
+ * тумблер FAB. Фазы «open → closing → closed»: панель играет выезд
+ * по transform (~260 мс) и размонтируется по таймеру (280 мс,
+ * без transitionend); prefers-reduced-motion — закрытие мгновенное.
+ * После закрытия фокус возвращается на FAB (гвард «панель была
+ * открыта» — фокус не воровать на маунте).
+ *
+ * Табы: «API · Сервисы» (список сервисов, радио стратегий,
+ * применить/сбросить) и «Состояния» (каталог живых машин, прыжки,
+ * журнал).
  *
  * Питается инстансом приложения (defineApp): из AppContext корня
  * (компонент монтируется внутри app.Root) или явно конфигом app.
@@ -27,6 +36,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ComponentType,
   type ReactNode,
@@ -39,6 +49,9 @@ import { Button, cx } from "../ui";
 import { DefaultDevPanel } from "./DefaultDevPanel";
 import { writeDevStrategyOverrides } from "./persist";
 import type { DevPanelApi, DevToolsConfig } from "./types";
+
+/** Запас поверх 260 мс transform-выезда (см. DefaultDevPanel). */
+const CLOSE_TIMEOUT_MS = 280;
 
 /** baseUrl из services-конфига; не биндился → undefined. */
 function readBaseUrl(): string | undefined {
@@ -81,11 +94,16 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
     // инъекция конфигом (тула вне app.Root).
     const appFromContext = useContext(AppContext);
     const app = appConfig ?? appFromContext;
-    const [open, setOpen] = useState(false);
+    // Жизненный цикл панели: closing — панель в DOM, играет выезд
+    // (FAB в это время no-op, aria-expanded ещё честен).
+    const [phase, setPhase] = useState<"closed" | "open" | "closing">("closed");
     const [catalog, setCatalog] = useState<ReadonlyArray<ServiceCatalogEntry>>([]);
     const [selection, setSelection] = useState<Record<string, string>>({});
     // Прогрев чанков модулей: сколько осталось (null — не идёт).
     const [warmLeft, setWarmLeft] = useState<number | null>(null);
+    const fabRef = useRef<HTMLButtonElement | null>(null);
+    // Гвард возврата фокуса: панель была открыта (не маунт тулы).
+    const panelWasOpenRef = useRef(false);
 
     // Каталог перечитывается при открытии и по мере прогрева: реестр
     // наполняется импортами чанков (defineService регистрирует сервисы
@@ -100,7 +118,7 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
 
     const openPanel = useCallback(() => {
       refreshCatalog();
-      setOpen(true);
+      setPhase("open");
       // Прогрев: тянем чанки всех модулей декларации — сервисы
       // регистрируются, каталог полон без статических импортов
       // в dev-чанке. loadModule кеширует — повторные открытия дёшевы.
@@ -119,18 +137,60 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
       }
     }, [app, refreshCatalog]);
 
-    const close = useCallback(() => setOpen(false), []);
+    // Закрытие: open → closing (панель играет transform-выезд) либо
+    // сразу closed при reduced-motion. Повторные close/click по FAB
+    // в фазах closing/closed — no-op.
+    const close = useCallback(() => {
+      setPhase((prev) => {
+        if (prev !== "open") {
+          return prev;
+        }
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          return "closed";
+        }
+        return "closing";
+      });
+    }, []);
 
+    // Выезд проигрался — размонтируем. Таймер живёт в эффекте —
+    // cleanup отменяет его при анмаунте тулы.
     useEffect(() => {
-      if (!open) return undefined;
+      if (phase !== "closing") {
+        return undefined;
+      }
+      const timer = setTimeout(() => setPhase("closed"), CLOSE_TIMEOUT_MS);
+      return () => clearTimeout(timer);
+    }, [phase]);
+
+    // Фокус-гигиена: панель закрылась — фокус на FAB (куда вернулся
+    // пользователь). Гвард — панель реально была открыта: на маунте
+    // тулы фокус не воровать.
+    useEffect(() => {
+      if (phase !== "closed") {
+        panelWasOpenRef.current = true;
+        return undefined;
+      }
+      if (panelWasOpenRef.current) {
+        panelWasOpenRef.current = false;
+        fabRef.current?.focus();
+      }
+      return undefined;
+    }, [phase]);
+
+    // Esc закрывает только открытую панель (в closing — анимация
+    // уже доигрывает, дёргать нечего).
+    useEffect(() => {
+      if (phase !== "open") {
+        return undefined;
+      }
       const onKey = (event: KeyboardEvent): void => {
         if (event.key === "Escape") {
-          setOpen(false);
+          close();
         }
       };
       window.addEventListener("keydown", onKey);
       return () => window.removeEventListener("keydown", onKey);
-    }, [open]);
+    }, [phase, close]);
 
     const select = useCallback((serviceId: string, strategyId: string) => {
       setSelection((prev) => ({ ...prev, [serviceId]: strategyId }));
@@ -180,6 +240,7 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
     return createPortal(
       <>
         <Button
+          ref={fabRef}
           variant="soft"
           size="sm"
           className={cx("sk-devtools-fab", className)}
@@ -189,15 +250,27 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
             bottom: "var(--sk-devtools-bottom, 1.5rem)",
             zIndex: 60,
           }}
-          aria-expanded={open}
+          aria-expanded={phase !== "closed"}
           aria-controls="sk-devtools-panel"
           title="DEV-инструменты"
           data-name="dev/fab"
-          onClick={open ? close : openPanel}
+          onClick={() => {
+            // closing — no-op: выезд доигрывает, чтобы не мигать
+            // панелью от повторных тапов.
+            if (phase === "open") {
+              close();
+            } else if (phase === "closed") {
+              openPanel();
+            }
+          }}
         >
           DEV
         </Button>
-        {open ? (view !== undefined ? view(api) : <DefaultDevPanel api={api} />) : null}
+        {phase !== "closed"
+          ? view !== undefined
+            ? view(api)
+            : <DefaultDevPanel api={api} closing={phase === "closing"} />
+          : null}
       </>,
       document.body,
     );
