@@ -11,6 +11,12 @@
  * контент (шапка и табы вне скролла). Анимация — только transform
  * (260 мс, вход и выход); prefers-reduced-motion — мгновенно.
  *
+ * Режимы показа (хром defineDev): язычок у левого края — наведение
+ * выдвигает панель «подсмотреть» (peek), уход курсора — задвигает;
+ * кнопка «Закрепить» (📌) в шапке держит панель открытой. Закрыть
+ * закреплённую — Esc / тумблер FAB / открепить (на таче открепление
+ * закрывает панель — автоскрытия без мыши нет).
+ *
  * Рисуется на примитивах shell-kit/ui (Button/Card/Chip) — работает в
  * любом проекте, импортирующем shell-kit/ui/styles.css; специфичные
  * для тулы стили (fixed-позиционирование, z-слои) — инлайн: слой ниже
@@ -195,10 +201,16 @@ function ServiceRow({ entry, api }: { entry: ServiceCatalogEntry; api: DevPanelA
 export function DefaultDevPanel({
   api,
   closing = false,
+  pinned = false,
+  onTogglePin,
 }: {
   api: DevPanelApi;
   /** Фаза выхода (defineDev): панель уезжает влево перед размонтированием. */
   closing?: boolean;
+  /** Панель закреплена — не прячется, когда курсор уходит (defineDev). */
+  pinned?: boolean;
+  /** Кнопка «Закрепить» в шапке — переключить пин (defineDev). */
+  onTogglePin?: () => void;
 }): ReactNode {
   const [tab, setTab] = useState<"services" | "states" | "user">("services");
   // reduced-motion фиксируем на маунте: вход и выход — без сдвига
@@ -243,8 +255,19 @@ export function DefaultDevPanel({
     >
       <div style={headerStyle}>
         <strong>DEV · инструменты</strong>
-        <Button variant="ghost" size="sm" onClick={api.close} aria-label="Закрыть" data-name="dev/close">
-          ✕
+        <Button
+          variant={pinned ? "soft" : "ghost"}
+          size="sm"
+          onClick={onTogglePin}
+          aria-pressed={pinned}
+          title={
+            pinned
+              ? "Открепить панель — снова прячется, когда курсор уходит"
+              : "Закрепить панель — не прячется, когда курсор уходит"
+          }
+          data-name="dev/pin"
+        >
+          📌
         </Button>
       </div>
 

@@ -1,7 +1,7 @@
 # shell-core — карта фреймворка (для Miro)
 
 Дата: 2026-10-01, дополнено 2026-10-11 (слои module/states, app,
-devtools; v0.9.0 — реестр деклараций, офлайн-превью, плашка пользователя; v0.9.2 — панель-drawer слева на всю высоту). Источники: README.md, VALUE.md, PLAN.md, ISSUES.md,
+devtools; v0.9.0 — реестр деклараций, офлайн-превью, плашка пользователя; v0.9.2 — панель-drawer слева на всю высоту; v0.9.3 — показ «подсмотреть/закрепить»: язычок у края, автоскрытие, пин вместо ✕). Источники: README.md, VALUE.md, PLAN.md, ISSUES.md,
 `src/*` (index-файлы слоёв). Назначение: база для карты в Miro —
 позиционирование, способности слоёв, чего нет и куда развивать.
 
@@ -67,7 +67,7 @@ HTML-прототип / ТЗ
 | `queries` | Query/mutation-слой: кеш, дедуп, инвалидация | `useServiceQuery`, `useServiceMutation`, `QueryPort`, `SelfRolledAdapter` | react |
 | `storage` | Локальная персистентность: данные + медиа | `configureStorage`, `dataCollection`, `putMedia`/`seedMedia`, `resolveMediaUrl`, `clearStorage`, `PersistentMock` | — (browser API) |
 | `ui` | Универсальные UI-примитивы на структурных классах | `cx`, `createIcon`, `Button/Card/Chip/…`, `components.css` | — (токены даёт проект) |
-| `devtools` | Dev-панель (v0.9.0; v0.9.2 — немодальный drawer слева на всю высоту, transform-анимация, reduced-motion): таб «API · Сервисы» (каталог стратегий, override через LS + reload), «Состояния» (каталог деклараций: состояния × варианты × access-матрица + офлайн-превью PreviewHost — изолированная машина в оверлее, без мутации URL/состояния приложения, работает с экрана входа; живые машины вторично: goto, журнал с replay) и «Пользователь» (пресеты офлайн-сессии: apply через reload, домен пользователя — в проекте); прогрев чанков модулей при открытии | `defineDev`, `StatesCatalog`, `PreviewHost`, `applyDevStrategyOverrides` | app (контекст), service, module/states (реестры машин и деклараций), ui |
+| `devtools` | Dev-панель (v0.9.0; v0.9.2 — немодальный drawer слева на всю высоту, transform-анимация, reduced-motion; v0.9.3 — язычок у края: hover подсматривает/уход курсора прячет, 📌 закрепляет): таб «API · Сервисы» (каталог стратегий, override через LS + reload), «Состояния» (каталог деклараций: состояния × варианты × access-матрица + офлайн-превью PreviewHost — изолированная машина в оверлее, без мутации URL/состояния приложения, работает с экрана входа; живые машины вторично: goto, журнал с replay) и «Пользователь» (пресеты офлайн-сессии: apply через reload, домен пользователя — в проекте); прогрев чанков модулей при открытии | `defineDev`, `StatesCatalog`, `PreviewHost`, `applyDevStrategyOverrides` | app (контекст), service, module/states (реестры машин и деклараций), ui |
 | learning: `demo` | Эталон — онбординг людей и few-shot для LLM; dogfood публичного API (импортирует пакет по имени) | демо-модуль на полном стеке | все слои |
 | learning: `demo-solid` | Компактный эталон Solid-адаптера: lazy/retry/loadingDelay, URL-петля, useServiceQuery | модули ok/broken/slow (ok — витрина defineModule: контроллер-setup + чистая вьюха) | все слои (через `solid`) |
 

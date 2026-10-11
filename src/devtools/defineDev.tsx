@@ -2,29 +2,37 @@
  * defineDev — фабрика dev-тулы приложения (аналог defineModule для dev).
  *
  * Возвращает компонент: плавающая кнопка «DEV» (fixed внизу справа,
- * портал в body, z-60) → панель-drawer слева на всю высоту окна
- * (z-70 — ниже проектных модалок): немодальная — без бекдропа,
- * приложение остаётся видимым и кликабельным; закрытие — Esc / ✕ /
- * тумблер FAB. Фазы «open → closing → closed»: панель играет выезд
- * по transform (~260 мс) и размонтируется по таймеру (280 мс,
- * без transitionend); prefers-reduced-motion — закрытие мгновенное.
- * После закрытия фокус возвращается на FAB (гвард «панель была
- * открыта» — фокус не воровать на маунте).
+ * портал в body, z-60) + язычок у левого края окна (z-60, под
+ * панелью) → панель-drawer слева на всю высоту (z-70 — ниже проектных
+ * модалок). Немодальная — без бекдропа, приложение остаётся видимым
+ * и кликабельным.
  *
- * Табы: «API · Сервисы» (список сервисов, радио стратегий,
- * применить/сбросить) и «Состояния» (каталог живых машин, прыжки,
- * журнал).
+ * Режимы показа:
+ * - «подсмотреть» (peek): наведение на язычок выдвигает панель, уход
+ *   курсора за её пределы — задвигает (только hover-устройства;
+ *   панель на всю высоту — «покинуть» = уйти правее неё);
+ * - «закрепить»: кнопка 📌 в шапке (или клик по язычку/FAB) держит
+ *   панель открытой; на таче автоскрытия нет — открепление закрывает.
+ * Закрыть закреплённую: Esc / тумблер FAB / открепить.
+ *
+ * Фазы «open → closing → closed»: панель играет выезд по transform
+ * (~260 мс) и размонтируется по таймеру (280 мс, без transitionend);
+ * prefers-reduced-motion — закрытие мгновенное. После закрытия фокус
+ * возвращается на FAB, только если был внутри тулы (hover-скрытие
+ * фокус не крадёт).
  *
  * Питается инстансом приложения (defineApp): из AppContext корня
  * (компонент монтируется внутри app.Root) или явно конфигом app.
  * Из декларации берётся список модулей — при открытии панели чанки
  * прогреваются (shell.loadModule): каталог сервисов полон с первого
- * открытия, статические импорты 13 сервисов в dev-чанке проекта
- * не нужны. Без инстанса (тула вне defineApp) — прежнее поведение:
+ * открытия, статические импорты сервисов в dev-чанке проекта не
+ * нужны. Без инстанса (тула вне defineApp) — прежнее поведение:
  * реестр видит только загруженные service-модули.
  *
  * Вьюха заменяемая: view-проп получает DevPanelApi (каталог, черновик
- * выбора, apply/reset/close) — UI на дизайн-системе проекта.
+ * выбора, apply/reset/close) — UI на дизайн-системе проекта; хром
+ * показа (язычок, автоскрытие, пин через клик по язычку/FAB) действует
+ * и на неё, кнопки 📌 у неё нет.
  *
  * Apply = write в LS + location.reload() (у сервисов есть состояние:
  * LS-моки, query-кеш, module-level инстансы — чистый старт). Ядро DEV
@@ -39,6 +47,7 @@ import {
   useRef,
   useState,
   type ComponentType,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -52,6 +61,36 @@ import type { DevPanelApi, DevToolsConfig } from "./types";
 
 /** Запас поверх 260 мс transform-выезда (см. DefaultDevPanel). */
 const CLOSE_TIMEOUT_MS = 280;
+
+/**
+ * Пока панель въезжает, hit-зона ещё едет за transform — контроль
+ * ухода курсора включается с задержкой, чуть больше анимации входа.
+ */
+const HIDE_ARM_DELAY_MS = 320;
+
+/** Есть ли у устройства честный hover (мышь/трекпад). */
+function hoverCapable(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(hover: hover)").matches
+  );
+}
+
+/** Язычок у левого края: наведение — подсмотреть, клик — закрепить. */
+const handleStyle: CSSProperties = {
+  position: "fixed",
+  left: 0,
+  top: "50%",
+  transform: "translateY(-50%)",
+  zIndex: 60,
+  writingMode: "vertical-rl",
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  padding: "14px 5px",
+  borderRadius: "0 999px 999px 0",
+  boxShadow: "2px 0 8px rgba(16, 33, 60, 0.18)",
+};
 
 /** baseUrl из services-конфига; не биндился → undefined. */
 function readBaseUrl(): string | undefined {
@@ -95,8 +134,10 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
     const appFromContext = useContext(AppContext);
     const app = appConfig ?? appFromContext;
     // Жизненный цикл панели: closing — панель в DOM, играет выезд
-    // (FAB в это время no-op, aria-expanded ещё честен).
+    // (триггеры в это время no-op, aria-expanded ещё честен).
     const [phase, setPhase] = useState<"closed" | "open" | "closing">("closed");
+    // Закреплена — не прячется при уходе курсора.
+    const [pinned, setPinned] = useState(false);
     const [catalog, setCatalog] = useState<ReadonlyArray<ServiceCatalogEntry>>([]);
     const [selection, setSelection] = useState<Record<string, string>>({});
     // Прогрев чанков модулей: сколько осталось (null — не идёт).
@@ -152,6 +193,25 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
       });
     }, []);
 
+    // Подсмотреть: наведение на язычок — панель без закрепления.
+    const peek = useCallback(() => {
+      setPinned(false);
+      openPanel();
+    }, [openPanel]);
+
+    // Кнопка «Закрепить» в шапке панели. На таче автоскрытия нет —
+    // откреплённую панель закрыть нечем, открепление = закрыть.
+    const togglePin = useCallback(() => {
+      if (pinned) {
+        setPinned(false);
+        if (!hoverCapable()) {
+          close();
+        }
+        return;
+      }
+      setPinned(true);
+    }, [pinned, close]);
+
     // Выезд проигрался — размонтируем. Таймер живёт в эффекте —
     // cleanup отменяет его при анмаунте тулы.
     useEffect(() => {
@@ -162,9 +222,46 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
       return () => clearTimeout(timer);
     }, [phase]);
 
-    // Фокус-гигиена: панель закрылась — фокус на FAB (куда вернулся
-    // пользователь). Гвард — панель реально была открыта: на маунте
-    // тулы фокус не воровать.
+    // Автоскрытие (только hover-устройства): незакреплённая панель
+    // закрывается, как только курсор оказывается вне тулы — панели
+    // и язычка. Панель на всю высоту, язычок у левого края под ней —
+    // «вне» = правее панели; контроль включается после въезда.
+    useEffect(() => {
+      if (phase !== "open" || pinned || !hoverCapable()) {
+        return undefined;
+      }
+      let armed = false;
+      const armTimer = setTimeout(() => {
+        armed = true;
+      }, HIDE_ARM_DELAY_MS);
+      const onMove = (event: MouseEvent): void => {
+        if (!armed) {
+          return;
+        }
+        const target = event.target as Node | null;
+        if (target === null) {
+          return;
+        }
+        const zone = document.getElementById("sk-devtools-zone");
+        const handle = document.getElementById("sk-devtools-handle");
+        if (
+          (zone !== null && zone.contains(target)) ||
+          (handle !== null && handle.contains(target))
+        ) {
+          return;
+        }
+        close();
+      };
+      document.addEventListener("mousemove", onMove);
+      return () => {
+        clearTimeout(armTimer);
+        document.removeEventListener("mousemove", onMove);
+      };
+    }, [phase, pinned, close]);
+
+    // Фокус-гигиена: панель закрылась — если фокус был внутри тулы
+    // (клик по радио, кнопкам), вернуть на FAB. Hover-скрытие чужой
+    // фокус не крадёт; на маунте тулы — тоже (гвард «была открыта»).
     useEffect(() => {
       if (phase !== "closed") {
         panelWasOpenRef.current = true;
@@ -172,19 +269,28 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
       }
       if (panelWasOpenRef.current) {
         panelWasOpenRef.current = false;
-        fabRef.current?.focus();
+        const active = document.activeElement;
+        const zone = document.getElementById("sk-devtools-zone");
+        const handle = document.getElementById("sk-devtools-handle");
+        if (
+          (zone !== null && zone.contains(active)) ||
+          (handle !== null && handle.contains(active))
+        ) {
+          fabRef.current?.focus();
+        }
       }
       return undefined;
     }, [phase]);
 
     // Esc закрывает только открытую панель (в closing — анимация
-    // уже доигрывает, дёргать нечего).
+    // уже доигрывает, дёргать нечего) и снимает закрепление.
     useEffect(() => {
       if (phase !== "open") {
         return undefined;
       }
       const onKey = (event: KeyboardEvent): void => {
         if (event.key === "Escape") {
+          setPinned(false);
           close();
         }
       };
@@ -240,7 +346,6 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
     return createPortal(
       <>
         <Button
-          ref={fabRef}
           variant="soft"
           size="sm"
           className={cx("sk-devtools-fab", className)}
@@ -255,22 +360,57 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
           title="DEV-инструменты"
           data-name="dev/fab"
           onClick={() => {
-            // closing — no-op: выезд доигрывает, чтобы не мигать
-            // панелью от повторных тапов.
-            if (phase === "open") {
+            // Явное открытие — закреплённой (курсор на FAB, вне
+            // панели: незакреплённая скрылась бы сразу).
+            if (phase === "closed") {
+              setPinned(true);
+              openPanel();
+            } else {
+              setPinned(false);
               close();
-            } else if (phase === "closed") {
+            }
+          }}
+        >
+          DEV
+        </Button>
+        <Button
+          variant="soft"
+          size="sm"
+          id="sk-devtools-handle"
+          className="sk-devtools-handle"
+          style={handleStyle}
+          aria-expanded={phase !== "closed"}
+          aria-controls="sk-devtools-panel"
+          title="DEV-инструменты: наведите — панель выдвинется; клик — закрепить"
+          data-name="dev/handle"
+          onMouseEnter={peek}
+          onClick={() => {
+            // Клик по язычку — явное намерение: закрепить (или
+            // открыть закреплённой). closing — доигрывает и reopened.
+            setPinned(true);
+            if (phase !== "open") {
               openPanel();
             }
           }}
         >
           DEV
         </Button>
-        {phase !== "closed"
-          ? view !== undefined
-            ? view(api)
-            : <DefaultDevPanel api={api} closing={phase === "closing"} />
-          : null}
+        {phase !== "closed" ? (
+          // Зона тулы для контроля ухода курсора: содержит панель
+          // (или кастомную view) и язычок-хром.
+          <div id="sk-devtools-zone" style={{ display: "contents" }}>
+            {view !== undefined ? (
+              view(api)
+            ) : (
+              <DefaultDevPanel
+                api={api}
+                closing={phase === "closing"}
+                pinned={pinned}
+                onTogglePin={togglePin}
+              />
+            )}
+          </div>
+        ) : null}
       </>,
       document.body,
     );
