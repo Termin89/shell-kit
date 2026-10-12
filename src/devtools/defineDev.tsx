@@ -194,8 +194,11 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
     }, []);
 
     // Подсмотреть: наведение на язычок — панель без закрепления.
+    // На таче hover-а нет (mouseenter — синтетика тапа): тап по
+    // язычку открывает сразу закреплённой — незакреплённую панель
+    // без мыши закрыть нечем.
     const peek = useCallback(() => {
-      setPinned(false);
+      setPinned(!hoverCapable());
       openPanel();
     }, [openPanel]);
 
