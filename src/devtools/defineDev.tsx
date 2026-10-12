@@ -145,6 +145,10 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
     const fabRef = useRef<HTMLButtonElement | null>(null);
     // Гвард возврата фокуса: панель была открыта (не маунт тулы).
     const panelWasOpenRef = useRef(false);
+    // Фокус был внутри тулы в момент закрытия. Замер — в close(),
+    // при живом DOM: к фазе closed панель размонтирована и браузер
+    // уже сбросил activeElement на body.
+    const focusInToolRef = useRef(false);
 
     // Каталог перечитывается при открытии и по мере прогрева: реестр
     // наполняется импортами чанков (defineService регистрирует сервисы
@@ -182,6 +186,14 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
     // сразу closed при reduced-motion. Повторные close/click по FAB
     // в фазах closing/closed — no-op.
     const close = useCallback(() => {
+      // Замер «фокус в туле» при живом DOM: после размонтирования
+      // панели activeElement уже body, эффект фазы closed опоздает.
+      const active = document.activeElement;
+      const zone = document.getElementById("sk-devtools-zone");
+      const handle = document.getElementById("sk-devtools-handle");
+      focusInToolRef.current =
+        (zone !== null && zone.contains(active)) ||
+        (handle !== null && handle.contains(active));
       setPhase((prev) => {
         if (prev !== "open") {
           return prev;
@@ -263,8 +275,9 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
     }, [phase, pinned, close]);
 
     // Фокус-гигиена: панель закрылась — если фокус был внутри тулы
-    // (клик по радио, кнопкам), вернуть на FAB. Hover-скрытие чужой
-    // фокус не крадёт; на маунте тулы — тоже (гвард «была открыта»).
+    // (клик по радио, кнопкам; замер — в close(), при живом DOM),
+    // вернуть на FAB. Hover-скрытие чужой фокус не крадёт; на маунте
+    // тулы — тоже (гвард «была открыта»).
     useEffect(() => {
       if (phase !== "closed") {
         panelWasOpenRef.current = true;
@@ -272,13 +285,8 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
       }
       if (panelWasOpenRef.current) {
         panelWasOpenRef.current = false;
-        const active = document.activeElement;
-        const zone = document.getElementById("sk-devtools-zone");
-        const handle = document.getElementById("sk-devtools-handle");
-        if (
-          (zone !== null && zone.contains(active)) ||
-          (handle !== null && handle.contains(active))
-        ) {
+        if (focusInToolRef.current) {
+          focusInToolRef.current = false;
           fabRef.current?.focus();
         }
       }
@@ -349,6 +357,7 @@ export function defineDev(config: DevToolsConfig = {}): ComponentType {
     return createPortal(
       <>
         <Button
+          ref={fabRef}
           variant="soft"
           size="sm"
           className={cx("sk-devtools-fab", className)}
